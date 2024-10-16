@@ -282,7 +282,7 @@ export class RPC<RequestMessage, ResponseMessage> {
           removeLeadingSlash(pathWithParams),
           addTrailingSlash(config.basePath)
         )
-      : new URL(pathWithParams, globalThis.location.href);
+      : new URL(pathWithParams, (globalThis as any).location.href);
 
     let body: string | undefined = undefined;
     if (params && this.method !== `DELETE` && this.method !== `GET`) {

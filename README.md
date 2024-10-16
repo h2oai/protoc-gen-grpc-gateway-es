@@ -81,7 +81,7 @@ managed:
 plugins:
   - name: es
     out: path/to/output/directory
-    opt: target=ts,import_extension=none
+    opt: target=ts
     path: ./path/to/your/script.sh
 ```
 
@@ -95,7 +95,7 @@ You need to change:
 
 Then run `buf generate` (assuming you have properly installed and configured the `buf`) and it will generate the TypeScript files for you.
 
-If you want to generate JavaScript instead of TypeScript, just pass change the plugin option `opt: target=js`. The list of all plugin options is [here](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#plugin-options). For reason behind option `import_extension=none` see the [caveats](#usage-caveats).
+If you want to generate JavaScript instead of TypeScript, just pass change the plugin option `opt: target=js`. The list of all plugin options is [here](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#plugin-options).
 
 #### Note on formatting
 
@@ -197,8 +197,6 @@ const responseJSON = await someServiceSomeMethodAsyncFunction(
 
 #### Usage caveats
 
-1. The generated TypeScript files import other files with `.js` extension, [this can be changed in the plugin configuration](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#import_extensionjs) and I recommend setting `import_extension=none` which produces extension-less imports, otherwise your bundler or test framework might fail to resolve the imports.
-
 1. The protobuf `oneof` are generated into the TypeScript as union, i.e. the message
 
    ```protobuf
@@ -260,7 +258,7 @@ const responseJSON = await someServiceSomeMethodAsyncFunction(
 
 ## Development
 
-First, read the [Protobuf-ES: Writing Plugins](https://github.com/bufbuild/protobuf-es/blob/main/docs/writing_plugins.md#protobuf-es-writing-plugins) and familiarize yourself with the [Bun toolkit](https://bun.sh/docs).
+First, read the [Protobuf-ES: Writing Plugins](https://github.com/bufbuild/protobuf-es/blob/ef8766d2aab4764a35bfed78960fc62ec2f0dfac/MANUAL.md#writing-plugins) and familiarize yourself with the [Bun toolkit](https://bun.sh/docs).
 
 Use test-driven development, first write a failing test with feature you want to implement and then change the code.
 

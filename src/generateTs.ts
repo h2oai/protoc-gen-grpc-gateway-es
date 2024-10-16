@@ -5,21 +5,20 @@ import type {
   DescOneof,
   DescService,
 } from "@bufbuild/protobuf";
-import {
-  type GeneratedFile,
-  type Printable,
-  type Schema,
-  getFieldTyping,
-  localName,
-  makeJsDoc,
-} from "@bufbuild/protoplugin/ecmascript";
+import type {
+  GeneratedFile,
+  Printable,
+  Schema,
+  ImportSymbol,
+} from "@bufbuild/protoplugin";
 
 import { FieldBehavior as GoogleapisFieldBehavior } from "../options/gen/google/api/field_behavior_pb";
 import {
+  fieldTypeScriptType,
   getGoogleapisFieldBehaviorOption,
   getGoogleapisHttpMethodOption,
   getOpenapiMessageOption,
-  isImportSymbol,
+  isWKTMessage,
   pathParametersToLocal,
   protoCamelCase,
 } from "./helpers";
@@ -34,9 +33,9 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   file.print(`// @ts-nocheck`);
   file.print(``);
   file.print(getRuntimeFileContent());
-  const RPC = file.export(`RPC`);
-  const BigIntString = file.export(`BigIntString`).toTypeOnly();
-  const BytesString = file.export(`BytesString`).toTypeOnly();
+  const RPC = file.import(`RPC`, `./runtime`) as ImportSymbol;
+  const BigIntString = file.import(`BigIntString`, `./runtime`, true)as ImportSymbol;
+  const BytesString = file.import(`BytesString`, `./runtime`, true)as ImportSymbol;
   return { BigIntString, BytesString, RPC };
 };
 
@@ -44,12 +43,12 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
  * Prints an Enum.
  */
 function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
-  f.print(makeJsDoc(enumeration));
-  f.print`export enum ${enumeration} {`;
+  f.print(f.jsDoc(enumeration));
+  f.print(`export ${enumeration} {`);
   for (const value of enumeration.values) {
     if (enumeration.values.indexOf(value) > 0) f.print();
-    f.print(makeJsDoc(value));
-    f.print`${localName(value)} = "${value.name}",`;
+    f.print(f.jsDoc(value));
+    f.print`${value.localName} = "${value.name}",`;
   }
   f.print`}`;
 }
@@ -61,7 +60,7 @@ function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
 function generateType(
   typing: Printable,
   required: boolean,
-  fieldBehavior: GoogleapisFieldBehavior | undefined,
+  fieldBehaviors: GoogleapisFieldBehavior[],
   runtimeFile: RuntimeFile
 ): { type: Printable; nullable?: boolean } {
   if (Array.isArray(typing)) {
@@ -70,7 +69,7 @@ function generateType(
     const resolved = generateType(
       typing[0],
       required,
-      fieldBehavior,
+      fieldBehaviors,
       runtimeFile
     );
     return {
@@ -78,8 +77,11 @@ function generateType(
       nullable: resolved.nullable,
     };
   }
-  if (isImportSymbol(typing) && typing.from === `@bufbuild/protobuf`) {
-    switch (typing.name) {
+  const isWKTRef = 
+    typeof typing === `object` && `kind` in typing && typing?.kind === `es_shape_ref`
+    && typing.desc.kind === `message` && isWKTMessage(typing.desc);
+  if (isWKTRef) {
+    switch (typing.desc.name) {
       default:
         return { type: `string` };
       case `Duration`:
@@ -89,7 +91,7 @@ function generateType(
         return {
           type: `string`,
           nullable:
-            !required && fieldBehavior !== GoogleapisFieldBehavior.OUTPUT_ONLY,
+            !required && !fieldBehaviors.includes(GoogleapisFieldBehavior.OUTPUT_ONLY),
         };
     }
   }
@@ -107,22 +109,22 @@ function generateField(
   schema: Schema,
   f: GeneratedFile,
   field: DescField,
-  openApiV2Required?: string[],
+  openApiV2Required: string[] | undefined,
   runtimeFile: RuntimeFile
 ) {
-  f.print(makeJsDoc(field));
-  const { typing } = getFieldTyping(field, f);
-  const googleapisFieldBehaviorOption = getGoogleapisFieldBehaviorOption(field);
+  f.print(f.jsDoc(field));
+  const { typing } = fieldTypeScriptType(field, f.runtime);
+  const googleapisFieldBehaviorOptions = getGoogleapisFieldBehaviorOption(field);
   const required =
     openApiV2Required?.includes(field.name) ||
-    googleapisFieldBehaviorOption === GoogleapisFieldBehavior.REQUIRED;
+    googleapisFieldBehaviorOptions.includes(GoogleapisFieldBehavior.REQUIRED);
   const { type, nullable } = generateType(
     typing,
     required,
-    googleapisFieldBehaviorOption,
+    googleapisFieldBehaviorOptions,
     runtimeFile
   );
-  f.print`${localName(field)}${required ? "" : "?"}: ${type}${
+  f.print`${field.localName}${required ? "" : "?"}: ${type}${
     !nullable ? "" : " | null"
   };`;
 }
@@ -136,8 +138,8 @@ function generateMessage(
   const oneOfs: DescOneof[] = [];
   const openApiV2Schema = getOpenapiMessageOption(message);
   const requiredFields = openApiV2Schema?.jsonSchema?.required;
-  f.print(makeJsDoc(message));
-  f.print`export type ${message} = {`;
+  f.print(f.jsDoc(message));
+  f.print(`export type ${message.name} = {`);
   for (const member of message.members) {
     switch (member.kind) {
       case "oneof":
@@ -197,7 +199,7 @@ function generateService(
         bodyPath = protoCamelCase(googleapisHttpMethodOption.body);
       }
     }
-    f.print(makeJsDoc(method));
+    f.print(f.jsDoc(method));
     f.print`export const ${service.name}_${method.name} = new ${
       runtimeFile.RPC
     }<${method.input.name}, ${method.output.name}>("${httpMethod}", "${path}"${

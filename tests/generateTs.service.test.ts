@@ -36,7 +36,7 @@ test(`should generate simple simple service`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { RPC } from "./runtime.js";
+      import { RPC } from "./runtime";
     
       export type SimpleMessageRequest = {
         foo?: string;
@@ -81,7 +81,7 @@ test(`should handle path with path parameter`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { RPC } from "./runtime.js";
+      import { RPC } from "./runtime";
     
       export type WithPathParameterRequest = {
         nameTest?: string;
@@ -164,8 +164,8 @@ test(`should do proper linking when service reference other file`, async () => {
   assertTypeScript(
     outputFileService.content!,
     `
-    import type { FlipMessage } from "./linking_resource_pb.js";
-    import { RPC } from "./runtime.js";
+    import type { FlipMessage } from "./linking_resource_pb";
+    import { RPC } from "./runtime";
       
     export type GetLinkiedRequest = {
       nameTest?: string;
@@ -220,7 +220,7 @@ test(`should support non GET methods`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { RPC } from "./runtime.js";
+      import { RPC } from "./runtime";
     
       export type CommonRequest = {
         nameTest?: string;
@@ -283,7 +283,7 @@ test(`should convert FieldMask type to string`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { RPC } from "./runtime.js";
+      import { RPC } from "./runtime";
 
       export type FlipMessage = {
         name?: string;
@@ -342,7 +342,7 @@ test(`should camel-case the body option`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { RPC } from "./runtime.js";
+      import { RPC } from "./runtime";
 
       export type FlipFlepMessage = {
         name?: string;
@@ -389,7 +389,7 @@ test(`should handle method w/o google.api.http option`, async () => {
   assertTypeScript(
     outputFile.content!,
     `
-      import { RPC } from "./runtime.js";
+      import { RPC } from "./runtime";
 
       export type SimpleMessage = {
         flip?: string;

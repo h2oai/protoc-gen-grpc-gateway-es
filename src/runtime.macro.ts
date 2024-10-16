@@ -1,4 +1,4 @@
-import type { ImportSymbol, Schema } from "@bufbuild/protoplugin/ecmascript";
+import type { ImportSymbol } from "@bufbuild/protoplugin";
 
 export type RuntimeFile = {
   BigIntString: ImportSymbol;

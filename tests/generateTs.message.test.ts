@@ -211,7 +211,7 @@ message BigIntMessage {
   assertTypeScript(
     outputFile.content!,
     `
-import type { BigIntString } from "./runtime.js";
+import type { BigIntString } from "./runtime";
 
 export type BigIntMessage = {
   sizeInStorage?: BigIntString;
@@ -235,7 +235,7 @@ message BytesMessage {
   assertTypeScript(
     outputFile.content!,
     `
-import type { BytesString } from "./runtime.js";
+import type { BytesString } from "./runtime";
 
 export type BytesMessage = {
   content?: BytesString;

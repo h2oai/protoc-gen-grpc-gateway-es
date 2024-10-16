@@ -3,10 +3,13 @@ import { unlink } from "node:fs/promises";
 
 import {
   CodeGeneratorRequest,
+  CodeGeneratorRequestSchema,
   CodeGeneratorResponse,
-  FileDescriptorSet,
-} from "@bufbuild/protobuf";
+  FileDescriptorSetSchema,
+} from "@bufbuild/protobuf/wkt";
 import { createEcmaScriptPlugin } from "@bufbuild/protoplugin";
+import { create, fromBinary } from "@bufbuild/protobuf";
+
 import ts from "typescript";
 
 import { generateTs } from "../src/generateTs";
@@ -20,7 +23,7 @@ type ProtoFile = {
 export async function getCodeGeneratorRequest(
   parameter = "",
   protoFiles: ProtoFile[]
-) {
+): Promise<CodeGeneratorRequest> {
   const filePaths: string[] = [];
   try {
     const cwd = new URL(`./proto/`, import.meta.url).pathname;
@@ -52,10 +55,11 @@ export async function getCodeGeneratorRequest(
     );
     const fileDescriptorBuffer = await new Response(proc.stdout).arrayBuffer();
     const fileDescriptorBin = new Uint8Array(fileDescriptorBuffer);
-    // Only binary format currently preserves extensions
-    // @see https://github.com/bufbuild/protobuf-es/issues/564
-    const fileDescriptorSet = FileDescriptorSet.fromBinary(fileDescriptorBin);
-    return new CodeGeneratorRequest({
+    const fileDescriptorSet = fromBinary(
+      FileDescriptorSetSchema,
+      fileDescriptorBin
+    );
+    return create(CodeGeneratorRequestSchema, {
       parameter,
       fileToGenerate: protoFiles.map((f) => f.name),
       protoFile: fileDescriptorSet.file,

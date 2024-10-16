@@ -1,41 +1,43 @@
 import {
-  DescField,
-  DescMessage,
-  DescMethod,
+  type DescExtension,
+  type DescField,
+  type DescMessage,
+  type DescMethod,
+  getOption,
   ScalarType,
 } from "@bufbuild/protobuf";
+import type { GeneratedFile, Printable } from "@bufbuild/protoplugin";
+
+import { openapiv2_schema } from "../options/gen/protoc-gen-openapiv2/options/annotations_pb";
+import { type Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openapiv2/options/openapiv2_pb";
+import { type HttpRule as GoogleapisHttpRule } from "../options/gen/google/api/http_pb";
+import { http } from "../options/gen/google/api/annotations_pb";
+import { field_behavior } from "../options/gen/google/api/field_behavior_pb";
+import { scalarTypeScriptType } from "@bufbuild/protobuf/codegenv1";
 import {
-  type ImportSymbol,
-  type Printable,
-  findCustomMessageOption,
-  findCustomScalarOption,
-} from "@bufbuild/protoplugin/ecmascript";
+  isWrapperDesc,
+  StructSchema,
+  ValueSchema,
+} from "@bufbuild/protobuf/wkt";
 
-import { Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openapiv2/options/openapiv2_pb";
-import { HttpRule as GoogleapisHttpRule } from "../options/gen/google/api/http_pb";
-import { FieldBehavior as GoogleapisFieldBehavior } from "../options/gen/google/api/field_behavior_pb";
-
-export const getOpenapiMessageOption = (message: DescMessage) => {
-  const option = findCustomMessageOption(message, 1042, OpenApiV2Schema);
-  return option;
+export const getOpenapiMessageOption = (
+  message: DescMessage
+): OpenApiV2Schema => {
+  return getOption(message, openapiv2_schema);
 };
 
-export const getGoogleapisHttpMethodOption = (method: DescMethod) => {
-  const option = findCustomMessageOption(method, 72295728, GoogleapisHttpRule);
-  return option;
+export const getGoogleapisHttpMethodOption = (
+  method: DescMethod
+): GoogleapisHttpRule => {
+  return getOption(method, http);
 };
 
 export const getGoogleapisFieldBehaviorOption = (field: DescField) => {
-  const option = findCustomScalarOption(field, 1052, ScalarType.BYTES);
-  if (!option) return undefined;
-  const value = option[0];
-  return value ? (value as GoogleapisFieldBehavior) : undefined;
+  return getOption(field, field_behavior);
 };
 
-export const isImportSymbol = (
-  printable: Exclude<Printable, Printable[]>
-): printable is ImportSymbol => {
-  return (printable as any)?.kind === `es_symbol`;
+export const isWKTMessage = (message: DescMessage) => {
+  return message.file.proto.package.startsWith("google.protobuf");
 };
 
 // copied from https://github.com/bufbuild/protobuf-es/blob/12974f616a3efeb249c21752f2a7a7b9d99b53f6/packages/protobuf/src/private/names.ts#L142C42-L142C42
@@ -83,3 +85,123 @@ export const pathParametersToLocal = (path: string) => {
     return `{${protoCamelCase(c1)}`;
   });
 };
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Coppied from starts
+// https://github.com/bufbuild/protobuf-es/blob/ef8766d2aab4764a35bfed78960fc62ec2f0dfac/packages/protoc-gen-es/src/util.ts#L32-L141
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function messageFieldTypeScriptType(
+  field: (DescField | DescExtension) & { message: DescMessage },
+  imports: GeneratedFile["runtime"]
+): Printable {
+  if (
+    isWrapperDesc(field.message) &&
+    !field.oneof &&
+    field.fieldKind == "message"
+  ) {
+    const baseType = field.message.fields[0].scalar;
+    return scalarTypeScriptType(baseType, false);
+  }
+  if (
+    field.message.typeName == StructSchema.typeName &&
+    field.parent?.typeName != ValueSchema.typeName
+  ) {
+    return imports.JsonObject;
+  }
+  return {
+    kind: "es_shape_ref",
+    desc: field.message,
+  };
+}
+
+export function fieldTypeScriptType(
+  field: DescField | DescExtension,
+  imports: GeneratedFile["runtime"]
+): {
+  typing: Printable;
+  optional: boolean;
+} {
+  const typing: Printable = [];
+  let optional = false;
+  switch (field.fieldKind) {
+    case "scalar":
+      typing.push(scalarTypeScriptType(field.scalar, field.longAsString));
+      optional = field.proto.proto3Optional;
+      break;
+    case "message": {
+      typing.push(messageFieldTypeScriptType(field, imports));
+      optional = true;
+      break;
+    }
+    case "enum":
+      typing.push({
+        kind: "es_shape_ref",
+        desc: field.enum,
+      });
+      optional = field.proto.proto3Optional;
+      break;
+    case "list":
+      optional = false;
+      switch (field.listKind) {
+        case "enum":
+          typing.push(
+            {
+              kind: "es_shape_ref",
+              desc: field.enum,
+            },
+            "[]"
+          );
+          break;
+        case "scalar":
+          typing.push(
+            scalarTypeScriptType(field.scalar, field.longAsString),
+            "[]"
+          );
+          break;
+        case "message": {
+          typing.push(messageFieldTypeScriptType(field, imports), "[]");
+          break;
+        }
+      }
+      break;
+    case "map": {
+      let keyType: string;
+      switch (field.mapKey) {
+        case ScalarType.INT32:
+        case ScalarType.FIXED32:
+        case ScalarType.UINT32:
+        case ScalarType.SFIXED32:
+        case ScalarType.SINT32:
+          keyType = "number";
+          break;
+        default:
+          keyType = "string";
+          break;
+      }
+      let valueType: Printable;
+      switch (field.mapKind) {
+        case "scalar":
+          valueType = scalarTypeScriptType(field.scalar, false);
+          break;
+        case "message":
+          valueType = messageFieldTypeScriptType(field, imports);
+          break;
+        case "enum":
+          valueType = {
+            kind: "es_shape_ref",
+            desc: field.enum,
+          };
+          break;
+      }
+      typing.push("{ [key: ", keyType, "]: ", valueType, " }");
+      optional = false;
+      break;
+    }
+  }
+  return { typing, optional };
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Coppied from ends
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

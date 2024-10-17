@@ -7,12 +7,11 @@ import {
   CodeGeneratorResponse,
   FileDescriptorSetSchema,
 } from "@bufbuild/protobuf/wkt";
-import { createEcmaScriptPlugin } from "@bufbuild/protoplugin";
 import { create, fromBinary } from "@bufbuild/protobuf";
 
 import ts from "typescript";
 
-import { generateTs } from "../src/generateTs";
+import { createPlugin } from "../src/plugin";
 
 type NonEmptyString = Exclude<string, "">;
 type ProtoFile = {
@@ -85,14 +84,6 @@ export const assertTypeScript = (
   expect(cleanTypeScript(typeScriptActual)).toBe(
     cleanTypeScript(typeScriptExpectec)
   );
-};
-
-const createPlugin = () => {
-  return createEcmaScriptPlugin({
-    name: "test-plugin",
-    version: "v0.1.0",
-    generateTs,
-  });
 };
 
 export const getResponse = (

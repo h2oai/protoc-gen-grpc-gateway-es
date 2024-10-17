@@ -1,5 +1,12 @@
 
 
+## [0.2.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.1.6...v0.2.0) (2024-10-17)
+
+
+### Features
+
+* add path pattern compiler and parser ([04ff62c](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/04ff62cfb44afa629562697149e28ecd8a72039f))
+
 ## [0.1.6](https://github.com/czabaj/protoc-gen-grpc-gateway-es/compare/v0.1.5...v0.1.6) (2023-12-19)
 
 

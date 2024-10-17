@@ -1,5 +1,12 @@
 
 
+## [0.2.1](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.2.0...v0.2.1) (2024-10-17)
+
+
+### Bug Fixes
+
+* enums use FQN as name, which is invalid ([fec57a0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/fec57a09c4a5eebbf7dc1cf165f640b8c9728bdf))
+
 ## [0.2.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.1.6...v0.2.0) (2024-10-17)
 
 

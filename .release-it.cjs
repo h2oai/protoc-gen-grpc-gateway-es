@@ -25,7 +25,9 @@ module.exports = {
     "@release-it/conventional-changelog": {
       path: ".",
       infile: "CHANGELOG.md",
-      preset: "conventionalcommits",
+      preset: {
+        name: "conventionalcommits",
+      },
       gitRawCommitsOpts: {
         path: ".",
       },

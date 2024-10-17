@@ -11,11 +11,12 @@
     "@bufbuild/protoc-gen-es": "^2.2.0",
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
-    "@release-it/conventional-changelog": "^9.0.0",
+    "@release-it/conventional-changelog": "^8.0.2",
     "@types/bun": "^1.1.11",
     "bun-types": "latest",
     "fast-check": "^3.22.0",
     "husky": "^8.0.3",
+    "release-it": "^17.7.0",
     "typescript": "5.6.3"
   },
   "files": [
@@ -36,7 +37,7 @@
   "scripts": {
     "build": "rm -rf ./dist/* && bun build.ts",
     "generateOptions": "cd options && bunx buf generate buf.build/googleapis/googleapis && bunx buf generate buf.build/grpc-ecosystem/grpc-gateway && bunx buf generate buf.build/protocolbuffers/wellknowntypes",
-    "release": "bunx release-it"
+    "release": "release-it"
   },
   "type": "module",
   "version": "0.2.0"

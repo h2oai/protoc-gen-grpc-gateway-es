@@ -1,5 +1,12 @@
 
 
+## [0.2.2](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.2.1...v0.2.2) (2024-10-17)
+
+
+### Bug Fixes
+
+* nested enum names not prefixed ([85592af](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/85592afccbec64c906727a8531eafd92e70ef70f))
+
 ## [0.2.1](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.2.0...v0.2.1) (2024-10-17)
 
 

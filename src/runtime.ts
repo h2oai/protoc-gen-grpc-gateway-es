@@ -335,3 +335,58 @@ export class RPC<RequestMessage, ResponseMessage> {
     return response as ResponseMessage;
   }
 }
+
+/**
+ * Given the protobuf option google.api.resource.pattern, return a string that can be compiled into a regexp which will
+ * extract the path parameters from a path as a _named_ capture group.
+ * NOTE: 
+ * @param pathPattern must follow the protobuf option google.api.resource.pattern format
+ * @example projects/{project}/documents/{document}/results/{result}
+ * @returns
+ */
+export const pathPatternToParseRegexp = (pathPattern: string): string =>
+  pathPattern.replace(/(\/)|(?:\{(\w+)\})/g, ((
+    _match: string,
+    forwardSlash: string,
+    pathParameter: string
+  ) => {
+    if (forwardSlash) {
+      return `\\/`;
+    }
+    if (pathParameter) {
+      return `(?<${pathParameter}>[^/]+)`;
+    }
+  }) as any);
+
+const reProtoPathPattern = /{(\w+)}/g;
+/**
+ * For a protobuf option google.api.resource.pattern, returns a resource name parser and compiler.
+ * @param pattern must follow the protobuf option google.api.resource.pattern format
+ * @example projects/{project}/documents/{document}/results/{result}
+ * @returns parseCompile
+ * @param parseCompile.compile a function that takes an object with the path parameters and returns a resource name
+ * @param parseCompile.parse a function that takes a resource name and returns an object with the path parameters
+ */
+export function getNameParser<Keys extends string>(
+  pattern: string
+): {
+  compile: (params: { [key in Keys]: string }) => string;
+  parse: (name: string) => { [key in Keys]: string };
+} {
+  const pathParseRegexpString = pathPatternToParseRegexp(pattern);
+  const reParse = new RegExp(pathParseRegexpString);
+  const compile = (params: { [key in Keys]: string }) =>
+    pattern.replace(
+      reProtoPathPattern,
+      (_match, paramName: Keys) => params[paramName]
+    );
+  const parse = (name: string) => {
+    const match = name.match(reParse);
+    if (!match) {
+      throw new Error(`Attempt to parse invalid name: "${name}"`);
+    }
+    const { groups } = match;
+    return groups as { [key in Keys]: string };
+  };
+  return { compile, parse };
+}

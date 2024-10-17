@@ -25,7 +25,6 @@ import {
   protoCamelCase,
 } from "./helpers";
 import { type RuntimeFile, getRuntimeFileContent } from "./runtime.macro" with { type: "macro" };
-import { reProtoPathPattern } from "./runtime";
 
 export type PluginSchema = Schema<PluginOptions>;
 
@@ -152,6 +151,8 @@ function generateField(
     !nullable ? "" : " | null"
   };`;
 }
+
+const reProtoPathPattern = /{([^/]+)}/g;
 
 function generateNameParser(
   f: GeneratedFile,

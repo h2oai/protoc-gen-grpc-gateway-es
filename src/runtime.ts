@@ -357,7 +357,7 @@ export const pathPatternToParseRegexp = (pathPattern: string): string =>
     }
   }) as any);
 
-export const reProtoPathPattern = /{([^/]+)}/g;
+const reProtoPathPattern = /{([^/]+)}/g;
 /**
  * For a protobuf option google.api.resource.pattern, returns a resource name parser and compiler.
  * @param pattern must follow the protobuf option google.api.resource.pattern format

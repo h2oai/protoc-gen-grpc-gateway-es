@@ -6,6 +6,12 @@ import {
   getOption,
   ScalarType,
 } from "@bufbuild/protobuf";
+import { scalarTypeScriptType } from "@bufbuild/protobuf/codegenv1";
+import {
+  isWrapperDesc,
+  StructSchema,
+  ValueSchema,
+} from "@bufbuild/protobuf/wkt";
 import type { GeneratedFile, Printable } from "@bufbuild/protoplugin";
 
 import { openapiv2_schema } from "../options/gen/protoc-gen-openapiv2/options/annotations_pb";
@@ -17,12 +23,6 @@ import {
   type ResourceDescriptor,
   resource,
 } from "../options/gen/google/api/resource_pb";
-import { scalarTypeScriptType } from "@bufbuild/protobuf/codegenv1";
-import {
-  isWrapperDesc,
-  StructSchema,
-  ValueSchema,
-} from "@bufbuild/protobuf/wkt";
 
 export const getOpenapiMessageOption = (
   message: DescMessage

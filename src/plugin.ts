@@ -1,7 +1,7 @@
 import { createEcmaScriptPlugin } from "@bufbuild/protoplugin";
 
 import { generateTs } from "./generateTs.js";
-import pkg from "../package.json" assert { type: "json" };
+import { name, version } from "../package.json" assert { type: "json" };
 
 /**
  * Boolean option that turns on generation of the _resource name_ compiler/parser.
@@ -37,8 +37,8 @@ function parseOptions(
 
 export const createPlugin = () =>
   createEcmaScriptPlugin({
-    name: pkg.name,
-    version: `v${pkg.version}`,
+    name,
+    version: `v${version}`,
     generateTs,
     parseOptions,
   });

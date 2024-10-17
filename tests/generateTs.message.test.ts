@@ -245,10 +245,12 @@ export type BytesMessage = {
 
 test(`should extract name compile/parser when it is described via google.api.resource option`, async () => {
   const inputFileName = `resource_name.proto`;
-  const req = await getCodeGeneratorRequest(`target=ts`, [
-    {
-      name: inputFileName,
-      content: `syntax = "proto3";
+  const req = await getCodeGeneratorRequest(
+    `target=ts,generate_name_parser=true`,
+    [
+      {
+        name: inputFileName,
+        content: `syntax = "proto3";
 import "google/api/resource.proto";
 
 message Message {
@@ -257,8 +259,9 @@ message Message {
   };
   string name = 1;
 };`,
-    },
-  ]);
+      },
+    ]
+  );
   const resp = getResponse(req);
   const outputFile = findResponseForInputFile(resp, inputFileName);
   assertTypeScript(

@@ -13,6 +13,7 @@ import type {
 } from "@bufbuild/protoplugin";
 
 import { FieldBehavior as GoogleapisFieldBehavior } from "../options/gen/google/api/field_behavior_pb";
+import type { PluginOptions } from "./plugin";
 import {
   fieldTypeScriptType,
   getGoogleapisFieldBehaviorOption,
@@ -26,10 +27,12 @@ import {
 import { type RuntimeFile, getRuntimeFileContent } from "./runtime.macro" with { type: "macro" };
 import { reProtoPathPattern } from "./runtime";
 
+export type PluginSchema = Schema<PluginOptions>;
+
 /**
  * Prints the runtime file and provides the reference to it's symbols.
  */
-export const getRuntimeFile = (schema: Schema): RuntimeFile => {
+export const getRuntimeFile = (schema: PluginSchema): RuntimeFile => {
   const file = schema.generateFile(`runtime.ts`);
   file.print(`/* eslint-disable */`);
   file.print(`// @ts-nocheck`);
@@ -54,7 +57,11 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
 /**
  * Prints an Enum.
  */
-function generateEnum(schema: Schema, f: GeneratedFile, enumeration: DescEnum) {
+function generateEnum(
+  schema: PluginSchema,
+  f: GeneratedFile,
+  enumeration: DescEnum
+) {
   f.print(f.jsDoc(enumeration));
   f.print(`export ${enumeration} {`);
   for (const value of enumeration.values) {
@@ -122,7 +129,7 @@ function generateType(
 }
 
 function generateField(
-  schema: Schema,
+  schema: PluginSchema,
   f: GeneratedFile,
   field: DescField,
   openApiV2Required: string[] | undefined,
@@ -163,7 +170,7 @@ function generateNameParser(
 }
 
 function generateMessage(
-  schema: Schema,
+  schema: PluginSchema,
   f: GeneratedFile,
   message: DescMessage,
   runtimeFile: RuntimeFile
@@ -205,7 +212,11 @@ function generateMessage(
     generateMessage(schema, f, nestedMessage, runtimeFile);
   }
   const resourceOption = getGoogleapisResourceOption(message);
-  if (resourceOption && resourceOption.pattern.length > 0) {
+  if (
+    schema.options.generateNameParser &&
+    resourceOption &&
+    resourceOption.pattern.length > 0
+  ) {
     const symbolPrefix = `${message.name
       .charAt(0)
       .toLocaleLowerCase()}${message.name.slice(1)}Name`;
@@ -225,7 +236,7 @@ function generateMessage(
 }
 
 function generateService(
-  schema: Schema,
+  schema: PluginSchema,
   f: GeneratedFile,
   service: DescService,
   runtimeFile: RuntimeFile,
@@ -259,7 +270,7 @@ function generateService(
   }
 }
 
-export function generateTs(schema: Schema) {
+export function generateTs(schema: PluginSchema) {
   const runtimeFile = getRuntimeFile(schema);
 
   for (const file of schema.files) {

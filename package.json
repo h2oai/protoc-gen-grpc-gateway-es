@@ -21,10 +21,10 @@
   "files": [
     "dist/index.js"
   ],
-  "git": "https://github.com/czabaj/protoc-gen-grpc-gateway-es",
+  "git": "https://github.com/h2oai/protoc-gen-grpc-gateway-es",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/czabaj/protoc-gen-grpc-gateway-es.git"
+    "url": "git+https://github.com/h2oai/protoc-gen-grpc-gateway-es.git"
   },
   "keywords": [
     "grpc-gateway",

@@ -14,7 +14,7 @@ module.exports = {
     releaseName: `v${version}`,
   },
   hooks: {
-    "before:init": "bun test",
+    "before:init": "bun test && bun run build",
     "before:git:release": ["git add --all"],
   },
   npm: {

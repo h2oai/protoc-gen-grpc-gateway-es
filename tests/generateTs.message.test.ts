@@ -306,3 +306,34 @@ export type SimpleMessage = {
 }`
   );
 });
+
+test(`nested enums have prefixed names`, async () => {
+  const inputFileName = `nested_enum.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+message NestedEnum {
+  enum State {
+    STATE_FOO = 0;
+    STATE_BAR = 1;
+  }
+  State state = 1;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+export type NestedEnum = {
+  state?: NestedEnum_State;
+}
+  
+export enum NestedEnum_State {
+  FOO = 'STATE_FOO',
+  BAR = 'STATE_BAR',
+}`
+  );
+});

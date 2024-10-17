@@ -13,6 +13,10 @@ import { type Schema as OpenApiV2Schema } from "../options/gen/protoc-gen-openap
 import { type HttpRule as GoogleapisHttpRule } from "../options/gen/google/api/http_pb";
 import { http } from "../options/gen/google/api/annotations_pb";
 import { field_behavior } from "../options/gen/google/api/field_behavior_pb";
+import {
+  type ResourceDescriptor,
+  resource,
+} from "../options/gen/google/api/resource_pb";
 import { scalarTypeScriptType } from "@bufbuild/protobuf/codegenv1";
 import {
   isWrapperDesc,
@@ -34,6 +38,12 @@ export const getGoogleapisHttpMethodOption = (
 
 export const getGoogleapisFieldBehaviorOption = (field: DescField) => {
   return getOption(field, field_behavior);
+};
+
+export const getGoogleapisResourceOption = (
+  message: DescMessage
+): ResourceDescriptor => {
+  return getOption(message, resource);
 };
 
 export const isWKTMessage = (message: DescMessage) => {

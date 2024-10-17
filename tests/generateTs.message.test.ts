@@ -242,3 +242,35 @@ export type BytesMessage = {
 }`
   );
 });
+
+test(`should extract name compile/parser when it is described via google.api.resource option`, async () => {
+  const inputFileName = `resource_name.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+import "google/api/resource.proto";
+
+message Message {
+  option (google.api.resource) = {
+    pattern: "foos/{foo}/bars/{bar}"
+  };
+  string name = 1;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+import { getNameParser } from "./runtime";
+
+export type Message = {
+  name?: string;
+}
+
+export const messageName = getNameParser<'foo' | 'bar'>('foos/{foo}/bars/{bar}');
+`
+  );
+});

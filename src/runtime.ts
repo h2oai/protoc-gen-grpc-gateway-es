@@ -339,7 +339,6 @@ export class RPC<RequestMessage, ResponseMessage> {
 /**
  * Given the protobuf option google.api.resource.pattern, return a string that can be compiled into a regexp which will
  * extract the path parameters from a path as a _named_ capture group.
- * NOTE: 
  * @param pathPattern must follow the protobuf option google.api.resource.pattern format
  * @example projects/{project}/documents/{document}/results/{result}
  * @returns
@@ -358,7 +357,7 @@ export const pathPatternToParseRegexp = (pathPattern: string): string =>
     }
   }) as any);
 
-const reProtoPathPattern = /{(\w+)}/g;
+export const reProtoPathPattern = /{([^/]+)}/g;
 /**
  * For a protobuf option google.api.resource.pattern, returns a resource name parser and compiler.
  * @param pattern must follow the protobuf option google.api.resource.pattern format

@@ -17,12 +17,14 @@ import {
   fieldTypeScriptType,
   getGoogleapisFieldBehaviorOption,
   getGoogleapisHttpMethodOption,
+  getGoogleapisResourceOption,
   getOpenapiMessageOption,
   isWKTMessage,
   pathParametersToLocal,
   protoCamelCase,
 } from "./helpers";
 import { type RuntimeFile, getRuntimeFileContent } from "./runtime.macro" with { type: "macro" };
+import { reProtoPathPattern } from "./runtime";
 
 /**
  * Prints the runtime file and provides the reference to it's symbols.
@@ -33,10 +35,20 @@ export const getRuntimeFile = (schema: Schema): RuntimeFile => {
   file.print(`// @ts-nocheck`);
   file.print(``);
   file.print(getRuntimeFileContent());
-  const RPC = file.import(`RPC`, `./runtime`) as ImportSymbol;
-  const BigIntString = file.import(`BigIntString`, `./runtime`, true)as ImportSymbol;
-  const BytesString = file.import(`BytesString`, `./runtime`, true)as ImportSymbol;
-  return { BigIntString, BytesString, RPC };
+  const filePath = `./runtime`;
+  const RPC = file.import(`RPC`, filePath) as ImportSymbol;
+  const BigIntString = file.import(
+    `BigIntString`,
+    filePath,
+    true
+  ) as ImportSymbol;
+  const BytesString = file.import(
+    `BytesString`,
+    filePath,
+    true
+  ) as ImportSymbol;
+  const getNameParser = file.import(`getNameParser`, filePath) as ImportSymbol;
+  return { BigIntString, BytesString, RPC, getNameParser };
 };
 
 /**
@@ -77,9 +89,12 @@ function generateType(
       nullable: resolved.nullable,
     };
   }
-  const isWKTRef = 
-    typeof typing === `object` && `kind` in typing && typing?.kind === `es_shape_ref`
-    && typing.desc.kind === `message` && isWKTMessage(typing.desc);
+  const isWKTRef =
+    typeof typing === `object` &&
+    `kind` in typing &&
+    typing?.kind === `es_shape_ref` &&
+    typing.desc.kind === `message` &&
+    isWKTMessage(typing.desc);
   if (isWKTRef) {
     switch (typing.desc.name) {
       default:
@@ -91,7 +106,8 @@ function generateType(
         return {
           type: `string`,
           nullable:
-            !required && !fieldBehaviors.includes(GoogleapisFieldBehavior.OUTPUT_ONLY),
+            !required &&
+            !fieldBehaviors.includes(GoogleapisFieldBehavior.OUTPUT_ONLY),
         };
     }
   }
@@ -114,7 +130,8 @@ function generateField(
 ) {
   f.print(f.jsDoc(field));
   const { typing } = fieldTypeScriptType(field, f.runtime);
-  const googleapisFieldBehaviorOptions = getGoogleapisFieldBehaviorOption(field);
+  const googleapisFieldBehaviorOptions =
+    getGoogleapisFieldBehaviorOption(field);
   const required =
     openApiV2Required?.includes(field.name) ||
     googleapisFieldBehaviorOptions.includes(GoogleapisFieldBehavior.REQUIRED);
@@ -127,6 +144,22 @@ function generateField(
   f.print`${field.localName}${required ? "" : "?"}: ${type}${
     !nullable ? "" : " | null"
   };`;
+}
+
+function generateNameParser(
+  f: GeneratedFile,
+  pattern: string,
+  symbolName: string,
+  runtimeFile: RuntimeFile
+) {
+  const params = Array.from(pattern.matchAll(reProtoPathPattern)).map(
+    (m) => `'${m[1]}'`
+  );
+  f.print(
+    `export const ${symbolName} = `,
+    runtimeFile.getNameParser,
+    `<${params.join(" | ")}>("${pattern}");`
+  );
 }
 
 function generateMessage(
@@ -170,6 +203,24 @@ function generateMessage(
   }
   for (const nestedMessage of message.nestedMessages) {
     generateMessage(schema, f, nestedMessage, runtimeFile);
+  }
+  const resourceOption = getGoogleapisResourceOption(message);
+  if (resourceOption && resourceOption.pattern.length > 0) {
+    const symbolPrefix = `${message.name
+      .charAt(0)
+      .toLocaleLowerCase()}${message.name.slice(1)}Name`;
+    if (resourceOption.pattern.length === 1) {
+      generateNameParser(
+        f,
+        resourceOption.pattern[0],
+        symbolPrefix,
+        runtimeFile
+      );
+    } else {
+      for (let i = 0, pattern; (pattern = resourceOption.pattern[i]); i++) {
+        generateNameParser(f, pattern, `${symbolPrefix}${i + 1}`, runtimeFile);
+      }
+    }
   }
 }
 

@@ -277,3 +277,32 @@ export const messageName = getNameParser<'foo' | 'bar'>('foos/{foo}/bars/{bar}')
 `
   );
 });
+
+test(`does not use FQN for message name`, async () => {
+  const inputFileName = `no_fqn_message.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+package test.example;
+
+message SimpleMessage {
+  string foo = 1;
+  int32 bar = 2;
+  bool baz = 3;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+export type SimpleMessage = {
+  foo?: string;
+  bar?: number;
+  baz?: boolean;
+}`
+  );
+});

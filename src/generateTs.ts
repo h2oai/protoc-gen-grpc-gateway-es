@@ -61,8 +61,9 @@ function generateEnum(
   f: GeneratedFile,
   enumeration: DescEnum
 ) {
+  const enumName = [enumeration.parent?.name, enumeration.name].filter(Boolean).join("_");
   f.print(f.jsDoc(enumeration));
-  f.print(`export enum ${enumeration.name} {`);
+  f.print(`export enum ${enumName} {`);
   for (const value of enumeration.values) {
     if (enumeration.values.indexOf(value) > 0) f.print();
     f.print(f.jsDoc(value));

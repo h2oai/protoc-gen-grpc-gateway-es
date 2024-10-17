@@ -1,99 +1,110 @@
-import { expect, test } from "bun:test";
+import { expect, test, describe, it } from "bun:test";
 
 import { base64Encode } from "@bufbuild/protobuf/wire";
+import fc from "fast-check";
 
 import {
   BigIntString,
   RPC,
   bytesStringToUint8Array,
+  getNameParser,
+  pathPatternToParseRegexp,
   replacePathParameters,
   toBigIntString,
   toBytesString,
 } from "../src/runtime";
 
-test(`should replace path parameters`, () => {
-  const path = "/v1/{name=projects/*/documents/*}/{message_id}";
-  const parameters = {
-    name: "projects/a/documents/b",
-    message_id: "XYZ",
-  };
-  const replaced = replacePathParameters(path, parameters);
-  expect(replaced).toBe("/v1/projects/a/documents/b/XYZ");
+describe(`replacePathParameters`, () => {
+  it(`should replace path parameters`, () => {
+    const path = "/v1/{name=projects/*/documents/*}/{message_id}";
+    const parameters = {
+      name: "projects/a/documents/b",
+      message_id: "XYZ",
+    };
+    const replaced = replacePathParameters(path, parameters);
+    expect(replaced).toBe("/v1/projects/a/documents/b/XYZ");
+  });
 });
 
-test(`should handle nested path parameters`, () => {
-  const path = "/v1/{flip.flap.flop}/{message_id}";
-  const parameters = {
-    flip: { flap: { flop: `flup` } },
-    message_id: "XYZ",
-  };
-  const rpc = new RPC(`POST`, path);
-  const config = {
-    basePath: `https://example.test`,
-  };
-  const request = rpc.createRequest(config, parameters);
-  expect(request.url).toBe(`https://example.test/v1/flup/XYZ`);
-});
+describe(`RPC`, () => {
+  it(`should handle nested path parameters`, () => {
+    const path = "/v1/{flip.flap.flop}/{message_id}";
+    const parameters = {
+      flip: { flap: { flop: `flup` } },
+      message_id: "XYZ",
+    };
+    const rpc = new RPC(`POST`, path);
+    const config = {
+      basePath: `https://example.test`,
+    };
+    const request = rpc.createRequest(config, parameters);
+    expect(request.url).toBe(`https://example.test/v1/flup/XYZ`);
+  });
 
-test(`should properly distribute path parameters`, async () => {
-  const path = `/v1/{flip.name}`;
-  const parameters = {
-    flip: { name: `flap`, flop: `flup` },
-    updateMask: `flop.flup`,
-  };
-  const rpc = new RPC(`PATCH`, path, "flip");
-  const config = { basePath: `https://example.test` };
-  const request = rpc.createRequest(config, parameters);
-  // the `flip.name` should be in the path, the `updateMask` should be in the queryString
-  expect(request.url).toBe(`https://example.test/v1/flap?updateMask=flop.flup`);
-  const bodyContent = await new Response(request.body).text();
-  // the body should contain the `flip` object, b/c/ the `bodyPath` was set to `flip`
-  expect(bodyContent).toBe(JSON.stringify(parameters.flip));
-});
+  it(`should properly distribute path parameters`, async () => {
+    const path = `/v1/{flip.name}`;
+    const parameters = {
+      flip: { name: `flap`, flop: `flup` },
+      updateMask: `flop.flup`,
+    };
+    const rpc = new RPC(`PATCH`, path, "flip");
+    const config = { basePath: `https://example.test` };
+    const request = rpc.createRequest(config, parameters);
+    // the `flip.name` should be in the path, the `updateMask` should be in the queryString
+    expect(request.url).toBe(
+      `https://example.test/v1/flap?updateMask=flop.flup`
+    );
+    const bodyContent = await new Response(request.body).text();
+    // the body should contain the `flip` object, b/c/ the `bodyPath` was set to `flip`
+    expect(bodyContent).toBe(JSON.stringify(parameters.flip));
+  });
 
-test(`should send all non-path parameters as query-string for http method DELETE`, () => {
-  const path = `/v1/{name}`;
-  const parameters = {
-    name: `flap`,
-    flop: [`flup`, `flep`],
-  };
-  const rpc = new RPC(`DELETE`, path);
-  const config = { basePath: `https://example.test` };
-  const request = rpc.createRequest(config, parameters);
-  // the `flop` shuld be in the queryString
-  expect(request.url).toBe(`https://example.test/v1/flap?flop=flup&flop=flep`);
-});
+  it(`should send all non-path parameters as query-string for http method DELETE`, () => {
+    const path = `/v1/{name}`;
+    const parameters = {
+      name: `flap`,
+      flop: [`flup`, `flep`],
+    };
+    const rpc = new RPC(`DELETE`, path);
+    const config = { basePath: `https://example.test` };
+    const request = rpc.createRequest(config, parameters);
+    // the `flop` shuld be in the queryString
+    expect(request.url).toBe(
+      `https://example.test/v1/flap?flop=flup&flop=flep`
+    );
+  });
 
-test(`should set Bearer token if provided as a string in config`, () => {
-  const path = `/v1/flip`;
-  const rpc = new RPC(`GET`, path);
-  const config = {
-    basePath: `https://example.test`,
-    bearerToken: `secret`,
-  };
-  const request = rpc.createRequest(config, undefined);
-  expect(request.headers.get("Authorization")).toBe(`Bearer secret`);
-});
+  it(`should set Bearer token if provided as a string in config`, () => {
+    const path = `/v1/flip`;
+    const rpc = new RPC(`GET`, path);
+    const config = {
+      basePath: `https://example.test`,
+      bearerToken: `secret`,
+    };
+    const request = rpc.createRequest(config, undefined);
+    expect(request.headers.get("Authorization")).toBe(`Bearer secret`);
+  });
 
-test(`should set Bearer token if provided as a function`, () => {
-  const path = `/v1/flip`;
-  const rpc = new RPC(`GET`, path);
-  const config = {
-    basePath: `https://example.test`,
-    bearerToken: () => `psst!`,
-  };
-  const request = rpc.createRequest(config, undefined);
-  expect(request.headers.get("Authorization")).toBe(`Bearer psst!`);
-});
+  it(`should set Bearer token if provided as a function`, () => {
+    const path = `/v1/flip`;
+    const rpc = new RPC(`GET`, path);
+    const config = {
+      basePath: `https://example.test`,
+      bearerToken: () => `psst!`,
+    };
+    const request = rpc.createRequest(config, undefined);
+    expect(request.headers.get("Authorization")).toBe(`Bearer psst!`);
+  });
 
-test(`should prepend full URL basePath`, () => {
-  const path = `/v1/flip`;
-  const rpc = new RPC(`GET`, path);
-  const config = {
-    basePath: `https://example.test/api`,
-  };
-  const request = rpc.createRequest(config, undefined);
-  expect(request.url).toBe(`https://example.test/api/v1/flip`);
+  it(`should prepend full URL basePath`, () => {
+    const path = `/v1/flip`;
+    const rpc = new RPC(`GET`, path);
+    const config = {
+      basePath: `https://example.test/api`,
+    };
+    const request = rpc.createRequest(config, undefined);
+    expect(request.url).toBe(`https://example.test/api/v1/flip`);
+  });
 });
 
 test(`the method for binary enc/de-coding conforms to @bufbuild etalon`, async () => {
@@ -108,13 +119,74 @@ test(`the method for binary enc/de-coding conforms to @bufbuild etalon`, async (
 
 test(`the toBigIntString function accepts wide range of inputs`, () => {
   // accepts number
-  expect(toBigIntString(0)).toBe(`0`);
+  expect(toBigIntString(0) as string).toBe(`0`);
   // accepts string
-  expect(toBigIntString(`1`)).toBe(`1`);
+  expect(toBigIntString(`1`) as string).toBe(`1`);
   // accepts BigInt
-  expect(toBigIntString(BigInt(-1))).toBe(`-1`);
+  expect(toBigIntString(BigInt(-1)) as string).toBe(`-1`);
   // accepts BigIntString
-  expect(toBigIntString(`-1` as BigIntString)).toBe(`-1`);
+  expect(toBigIntString(`-1` as BigIntString) as string).toBe(`-1`);
   // throws with invalid string
   expect(() => toBigIntString(`1.1`)).toThrow();
+});
+
+describe("getNameParser", () => {
+  it(`should provide a parse and compile functions`, () => {
+    const pattern = `projects/{project}/documents/{document}/results/{result}`;
+    const parser = getNameParser(pattern);
+    expect(parser).toEqual({
+      compile: expect.any(Function),
+      parse: expect.any(Function),
+    });
+  });
+  it(`should parse a according to the pattern`, () => {
+    const pattern = `projects/{project}/documents/{document}/results/{result}`;
+    const parser = getNameParser(pattern);
+    const parsed = parser.parse(`projects/foo/documents/bar/results/baz`);
+    expect(parsed).toEqual({
+      project: `foo`,
+      document: `bar`,
+      result: `baz`,
+    });
+  });
+  it(`should parse any non-empty URL safe symbols`, () => {
+    fc.assert(
+      fc.property(
+        fc.webSegment().filter(Boolean),
+        fc.webSegment().filter(Boolean),
+        (segmentA, segmentB) => {
+          const pattern = `projects/{project}/documents/{document}`;
+          const parser = getNameParser(pattern);
+          const parsed = parser.parse(
+            `projects/${segmentA}/documents/${segmentB}`
+          );
+          expect(parsed).toEqual({
+            project: segmentA,
+            document: segmentB,
+          });
+        }
+      )
+    );
+  });
+  it(`should compile a according to the pattern`, () => {
+    const pattern = `projects/{project}/documents/{document}/results/{result}`;
+    const parser = getNameParser(pattern);
+    const compiled = parser.compile({
+      project: `foo`,
+      document: `bar`,
+      result: `baz`,
+    });
+    expect(compiled).toBe(`projects/foo/documents/bar/results/baz`);
+  });
+});
+
+describe("pathPatternToParseRegexp", () => {
+  it(`should convert a path pattern to a regular expression ready string`, () => {
+    const reReady = pathPatternToParseRegexp(
+      `projects/{project}/documents/{document}/results/{result}`
+    );
+    expect(reReady).toBe(
+      `projects\\/(?<project>[^/]+)\\/documents\\/(?<document>[^/]+)\\/results\\/(?<result>[^/]+)`
+    );
+  });
 });

@@ -7,7 +7,7 @@ Generate TypeScript client for gRPC API exposed via grpc-gateway. Powered by [pr
 The plugin walks over the proto files and converts
 
 - protobuf messages to TypeScipt types and
-- protobuf RPC to RPC JavaScript classes.
+- protobuf RPC to JavaScript classes that represents the RPC.
 
 The RPC JavaScript class contains data about protobuf RPC and two useful methods, the signature of the class is
 
@@ -95,7 +95,7 @@ You need to change:
 
 Then run `buf generate` (assuming you have properly installed and configured the `buf`) and it will generate the TypeScript files for you.
 
-If you want to generate JavaScript instead of TypeScript, just pass change the plugin option `opt: target=js`. The list of all plugin options is [here](https://github.com/bufbuild/protobuf-es/tree/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protoc-gen-es#plugin-options).
+If you want to generate JavaScript instead of TypeScript, just change the plugin option `opt: target=js`. The list of all plugin options is [here](https://github.com/bufbuild/protobuf-es/blob/ef8766d2aab4764a35bfed78960fc62ec2f0dfac/MANUAL.md#plugin-options).
 
 #### Note on formatting
 

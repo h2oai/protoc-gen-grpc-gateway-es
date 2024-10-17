@@ -95,8 +95,6 @@ You need to change:
 
 Then run `buf generate` (assuming you have properly installed and configured the `buf`) and it will generate the TypeScript files for you.
 
-If you want to generate JavaScript instead of TypeScript, just change the plugin option `opt: target=js`. The list of all plugin options is [here](https://github.com/bufbuild/protobuf-es/blob/ef8766d2aab4764a35bfed78960fc62ec2f0dfac/MANUAL.md#plugin-options).
-
 #### Note on formatting
 
 To simplify the development, this plugin is not concerned with pretty printed output. The generated files are readable, but if your eyes are bleeding, use your favorite formatter after the files generation, e.g.
@@ -104,6 +102,47 @@ To simplify the development, this plugin is not concerned with pretty printed ou
 ```sh
 npx prettier --write gen/es/
 ```
+
+#### Plugin options
+
+The plugin options inherits the protobuf-es framework options, which are documented [here](https://github.com/bufbuild/protobuf-es/blob/ef8766d2aab4764a35bfed78960fc62ec2f0dfac/MANUAL.md#plugin-options).
+
+There are also a few options specific to this plugin
+
+| Option                 | Type    | Default |
+| ---------------------- | ------- | ------- |
+| `generate_name_parser` | boolean | `false` |
+
+##### `generate_name_parser`
+
+If your API follows the [Google AIP resource names](https://google.aip.dev/122) then the `name` field of your resource is typically described via `google.api.resource.pattern` annotation on the protobuf message. When you set this plugin option to `true` it will read the resource name pattern and will generate a compiler/parser function for the resource name. The function is named `<message>Name` and it allows you to parse the dynamic parts (params) of the pattern or construct the name from the dynamic parts (params).
+
+**_Example:_**
+
+```protobuf
+message Message {
+  option (google.api.resource) = {
+    pattern: "foos/{foo}/bars/{bar}"
+  };
+  string name = 1;
+};
+```
+
+This will generate the message TypeScript type and an object `messageName` that contains `compile` and `parse` functions.
+
+```TypeScript
+export type Message = {
+  name?: string;
+}
+
+// pseudo code
+export const messageName = {
+  compile: ({ foo: string, bar: string }) => string,
+  parse: (name: string) => { foo: string, bar: string }
+};
+```
+
+This is usefull e.g. when you build an UI and you need to use the dynamic parts of the name for your app URL structure. For example when your resource have a name pattern `projects/{project}/datasets/{dataset}` and your UI also works with a "projects" and "datasets" and has similar hierarchial URL structure, like `app/:project/:dataset`, then if your users land on the URL `app/ABZ/129` you know it maps to project `ABZ` and dataset `129` and you need to construct a `name` parameter for the API call from that params, and vice-versa, if the API provides you with a list of datasets with their names, you want to parse the name into `project` and `dataset`, to be able to construct the app URL for the links in the app. The compile/parse functions is a type safe way how to either parse path parameters from the `name` or construct the `name` from the path parameters.
 
 ### Usage in app code
 

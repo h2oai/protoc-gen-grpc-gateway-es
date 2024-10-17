@@ -62,7 +62,7 @@ function generateEnum(
   enumeration: DescEnum
 ) {
   f.print(f.jsDoc(enumeration));
-  f.print(`export ${enumeration} {`);
+  f.print(`export enum ${enumeration.name} {`);
   for (const value of enumeration.values) {
     if (enumeration.values.indexOf(value) > 0) f.print();
     f.print(f.jsDoc(value));

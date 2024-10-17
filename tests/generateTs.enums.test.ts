@@ -60,3 +60,33 @@ export enum State {
 }`
   );
 });
+
+test(`does not use FQN for enum name`, async () => {
+  const inputFileName = `no_fqn_enum.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+package test.example;
+
+enum State {
+  STATE_FOO = 0;
+  STATE_BAR = 1;
+  STATE_BAZ = 2;
+};
+    `,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+export enum State {
+  FOO = 'STATE_FOO',
+  BAR = 'STATE_BAR',
+  BAZ = 'STATE_BAZ',
+}`
+  );
+});

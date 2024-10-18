@@ -1,5 +1,12 @@
 
 
+## [0.2.3](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.2.2...v0.2.3) (2024-10-18)
+
+
+### Bug Fixes
+
+* failed to reference rpc input message types ([ddb718f](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/ddb718fc6500baf57b2bb97391db69e19df8d94a))
+
 ## [0.2.2](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.2.1...v0.2.2) (2024-10-17)
 
 

@@ -61,7 +61,9 @@ function generateEnum(
   f: GeneratedFile,
   enumeration: DescEnum
 ) {
-  const enumName = [enumeration.parent?.name, enumeration.name].filter(Boolean).join("_");
+  const enumName = [enumeration.parent?.name, enumeration.name]
+    .filter(Boolean)
+    .join("_");
   f.print(f.jsDoc(enumeration));
   f.print(`export enum ${enumName} {`);
   for (const value of enumeration.values) {
@@ -106,6 +108,8 @@ function generateType(
     switch (typing.desc.name) {
       default:
         return { type: `string` };
+      case `Empty`:
+        return { type: `{}`, nullable: !required };
       case `Duration`:
       case `Timestamp`:
         // the Duration and Timestamp are serialized to string in gRPC-gateway, but we also need them to be nullable
@@ -237,6 +241,9 @@ function generateMessage(
   }
 }
 
+const rpcTypeParam = (desc: DescMessage, runtimeFile: RuntimeFile): Printable =>
+  generateType({ kind: `es_shape_ref`, desc }, true, [], runtimeFile).type
+
 function generateService(
   schema: PluginSchema,
   f: GeneratedFile,
@@ -264,11 +271,15 @@ function generateService(
       }
     }
     f.print(f.jsDoc(method));
-    f.print`export const ${service.name}_${method.name} = new ${
-      runtimeFile.RPC
-    }<${method.input.name}, ${method.output.name}>("${httpMethod}", "${path}"${
-      bodyPath ? `, "${bodyPath}"` : ""
-    });`;
+    f.print(
+      `export const ${service.name}_${method.name} = new `,
+      runtimeFile.RPC,
+      `<`,
+      rpcTypeParam(method.input, runtimeFile),
+      `,`,
+      rpcTypeParam(method.output, runtimeFile),
+      `>("${httpMethod}", "${path}"${bodyPath ? `, "${bodyPath}"` : ""});`
+    );
   }
 }
 

@@ -230,7 +230,7 @@ test(`should support non GET methods`, async () => {
         bar?: number;
       }
       
-      export const AllHttpMethodsService_DeleteMethod = new RPC<CommonRequest, Empty>("DELETE", "/v1/{nameTest=projects/*/documents/*}");
+      export const AllHttpMethodsService_DeleteMethod = new RPC<CommonRequest, {}>("DELETE", "/v1/{nameTest=projects/*/documents/*}");
 
       export const AllHttpMethodsService_PatchMethod = new RPC<CommonRequest, CommonResponse>("PATCH", "/v1/{nameTest=projects/*/documents/*}");
 
@@ -396,6 +396,56 @@ test(`should handle method w/o google.api.http option`, async () => {
       }
       
       export const WithoutHttpOptionService_TestMethod = new RPC<SimpleMessage, SimpleMessage>("POST", "/test.example.v1.WithoutHttpOptionService/TestMethod");
+      `
+  );
+});
+
+test(`should handle types from adjacent files`, async () => {
+  const inputFileNameService = `service_referencing_message.proto`;
+  const inputFileNameMessage = `message_referenced_by_service.proto`;
+  const packageName = `test.example.v1`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileNameService,
+      content: `syntax = "proto3";
+
+      package ${packageName};
+
+      import "${inputFileNameMessage}";
+      
+      service ReferencingAdjaventMessage {
+        rpc TestMethod(TestMethodRequest) returns (ReferencedMessage);
+      };
+
+      message TestMethodRequest {}
+      `,
+    },
+    {
+      name: inputFileNameMessage,
+      content: `syntax = "proto3";
+
+      package ${packageName};
+      
+      message ReferencedMessage {
+        string flip = 1;
+      }
+      `,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFileService = findResponseForInputFile(
+    resp,
+    inputFileNameService
+  );
+  assertTypeScript(
+    outputFileService.content!,
+    `
+      import { RPC } from "./runtime";
+      import type { ReferencedMessage } from "./message_referenced_by_service_pb"
+
+      export type TestMethodRequest = {}
+      
+      export const ReferencingAdjaventMessage_TestMethod = new RPC<TestMethodRequest, ReferencedMessage>("POST", "/test.example.v1.ReferencingAdjaventMessage/TestMethod");
       `
   );
 });

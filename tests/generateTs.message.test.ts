@@ -337,3 +337,36 @@ export enum NestedEnum_State {
 }`
   );
 });
+
+test(`should generate external dependencies`, async () => {
+  const inputFileName = `external_dependencies.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+import "google/rpc/status.proto";
+
+message MessageExternalDep {
+  string foo = 1;
+  google.rpc.Status status = 2;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+import type { Status } from "./google/rpc/status_pb"
+
+export type MessageExternalDep = {
+  foo?: string;
+  status?: Status;
+}`
+  );
+  const generatedDependency = findResponseForInputFile(
+    resp,
+    `google/rpc/status.proto`
+  );
+});

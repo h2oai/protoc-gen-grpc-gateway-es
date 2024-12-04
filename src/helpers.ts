@@ -121,6 +121,19 @@ export const pathParametersToLocal = (path: string) => {
   });
 };
 
+/**
+ * Returns a proper TypeScript name for a potentially nested message or enum.
+ */
+export const getDescName = (d: DescEnum | DescMessage) => {
+  let name = d.name;
+  let p;
+  while ((p = d.parent)) {
+    name = `${p.name}_${name}`;
+    d = p;
+  }
+  return name;
+};
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Coppied from starts
 // https://github.com/bufbuild/protobuf-es/blob/ef8766d2aab4764a35bfed78960fc62ec2f0dfac/packages/protoc-gen-es/src/util.ts#L32-L141

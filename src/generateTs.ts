@@ -20,6 +20,7 @@ import {
   getGoogleapisFieldBehaviorOption,
   getGoogleapisHttpMethodOption,
   getGoogleapisResourceOption,
+  getDescName,
   getOpenapiMessageOption,
   isExternalDependency,
   isShapeImport,
@@ -64,9 +65,7 @@ function generateEnum(
   f: GeneratedFile,
   enumeration: DescEnum
 ) {
-  const enumName = [enumeration.parent?.name, enumeration.name]
-    .filter(Boolean)
-    .join("_");
+  const enumName = getDescName(enumeration);
   f.print(f.jsDoc(enumeration));
   f.print(`export enum ${enumName} {`);
   for (const value of enumeration.values) {
@@ -191,9 +190,7 @@ function generateMessage(
   const oneOfs: DescOneof[] = [];
   const openApiV2Schema = getOpenapiMessageOption(message);
   const requiredFields = openApiV2Schema?.jsonSchema?.required;
-  const messageName = [message.parent?.name, message.name]
-  .filter(Boolean)
-  .join("_");
+  const messageName = getDescName(message);
   f.print(f.jsDoc(message));
   f.print(`export type ${messageName} = {`);
   for (const member of message.members) {

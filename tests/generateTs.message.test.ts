@@ -371,7 +371,7 @@ export type MessageExternalDep = {
   );
 });
 
-test.only(`should handle nested messages`, async () => {
+test(`should handle nested messages`, async () => {
   const inputFileName = `nested_message.proto`;
   const req = await getCodeGeneratorRequest(`target=ts`, [
     {
@@ -397,5 +397,43 @@ export type NestedMessage {
 export type NestedMessage_Nested = {
   foo?: string;
 };`
+  );
+});
+
+test(`should handle two levels of nested messages`, async () => {
+  const inputFileName = `multiple_nested.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+message MultipleNested {
+  message Nested {
+    enum State {
+      STATE_FOO = 0;
+      STATE_BAR = 1;
+    }
+    State foo = 1;
+  }
+  Nested bar = 1;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+export type MultipleNested {
+  bar?: MultipleNested_Nested;
+};
+
+export type MultipleNested_Nested = {
+  foo?: MultipleNested_Nested_State;
+};
+
+export enum MultipleNested_Nested_State {
+  FOO = 'STATE_FOO',
+  BAR = 'STATE_BAR',
+}`
   );
 });

@@ -1,5 +1,24 @@
 
 
+## [0.3.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.1.6...v0.3.0) (2024-12-04)
+
+
+### Features
+
+* add name-parsers automatically ([191139b](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/191139b82e2f75164be0ac6f3b76c8c70381c586))
+* add path pattern compiler and parser ([62e3778](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/62e3778f2b39a6ee1e1dad7dbb5d258ff0bc77c2))
+* generate external dependencies when needed ([7013e55](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/7013e5579c4baaad8fa2db9cf4248670ee4beaa8))
+
+
+### Bug Fixes
+
+* build don't work ([3f91d3a](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/3f91d3a30fd3bd13bb8b58a0ab1c953a4a11e846))
+* does not support more than 2 levels of nesting ([e011889](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/e011889e7fe22cc8e5a2e114324b1af1fdd06527))
+* enums use FQN as name, which is invalid ([f71be81](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/f71be81f7b885267df17048fc0b8b1dcf98687fa))
+* failed to reference rpc input message types ([baf0085](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/baf0085bc70fdd73c512a4006e7b2bfa9fff0370))
+* nested enum names not prefixed ([b217092](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/b21709294ff4f876db96de930195f333d737e062))
+* nested messages wrongly named ([5518356](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/55183560c72c60c8591e2eabec2a84f08486a3a8))
+
 ## [0.2.3](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.2.2...v0.2.3) (2024-10-18)
 
 

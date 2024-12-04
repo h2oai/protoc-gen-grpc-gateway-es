@@ -370,3 +370,32 @@ export type MessageExternalDep = {
     `google/rpc/status.proto`
   );
 });
+
+test.only(`should handle nested messages`, async () => {
+  const inputFileName = `nested_message.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+message NestedMessage {
+  message Nested {
+    string foo = 1;
+  }
+  repeated Nested bar = 1;
+};`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+export type NestedMessage {
+  bar?: NestedMessage_Nested[];
+};
+
+export type NestedMessage_Nested = {
+  foo?: string;
+};`
+  );
+});

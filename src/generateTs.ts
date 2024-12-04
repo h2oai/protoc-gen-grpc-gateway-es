@@ -191,8 +191,11 @@ function generateMessage(
   const oneOfs: DescOneof[] = [];
   const openApiV2Schema = getOpenapiMessageOption(message);
   const requiredFields = openApiV2Schema?.jsonSchema?.required;
+  const messageName = [message.parent?.name, message.name]
+  .filter(Boolean)
+  .join("_");
   f.print(f.jsDoc(message));
-  f.print(`export type ${message.name} = {`);
+  f.print(`export type ${messageName} = {`);
   for (const member of message.members) {
     switch (member.kind) {
       case "oneof":

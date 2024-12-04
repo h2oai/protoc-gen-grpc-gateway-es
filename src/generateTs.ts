@@ -1,6 +1,7 @@
 import type {
   DescEnum,
   DescField,
+  DescFile,
   DescMessage,
   DescOneof,
   DescService,
@@ -20,6 +21,8 @@ import {
   getGoogleapisHttpMethodOption,
   getGoogleapisResourceOption,
   getOpenapiMessageOption,
+  isExternalDependency,
+  isShapeImport,
   isWKTMessage,
   pathParametersToLocal,
   protoCamelCase,
@@ -98,12 +101,7 @@ function generateType(
       nullable: resolved.nullable,
     };
   }
-  const isWKTRef =
-    typeof typing === `object` &&
-    `kind` in typing &&
-    typing?.kind === `es_shape_ref` &&
-    typing.desc.kind === `message` &&
-    isWKTMessage(typing.desc);
+  const isWKTRef = isShapeImport(typing) && isWKTMessage(typing.desc);
   if (isWKTRef) {
     switch (typing.desc.name) {
       default:
@@ -155,6 +153,15 @@ function generateField(
   f.print`${field.localName}${required ? "" : "?"}: ${type}${
     !nullable ? "" : " | null"
   };`;
+  const typeNonArray: Exclude<Printable, Printable[]> = Array.isArray(type)
+    ? type[0]
+    : (type as any);
+  if (
+    isShapeImport(typeNonArray) &&
+    isExternalDependency(schema, typeNonArray.desc)
+  ) {
+    generateFile(schema, typeNonArray.desc.file, runtimeFile);
+  }
 }
 
 const reProtoPathPattern = /{([^/]+)}/g;
@@ -242,7 +249,7 @@ function generateMessage(
 }
 
 const rpcTypeParam = (desc: DescMessage, runtimeFile: RuntimeFile): Printable =>
-  generateType({ kind: `es_shape_ref`, desc }, true, [], runtimeFile).type
+  generateType({ kind: `es_shape_ref`, desc }, true, [], runtimeFile).type;
 
 function generateService(
   schema: PluginSchema,
@@ -283,20 +290,31 @@ function generateService(
   }
 }
 
+const generatedFiles = new Set<string>();
+const generateFile = (
+  schema: PluginSchema,
+  file: DescFile,
+  runtimeFile: RuntimeFile
+) => {
+  if (generatedFiles.has(file.name)) return;
+  generatedFiles.add(file.name);
+  const f = schema.generateFile(file.name + "_pb.ts");
+  f.preamble(file);
+  for (const enumeration of file.enums) {
+    generateEnum(schema, f, enumeration);
+  }
+  for (const message of file.messages) {
+    generateMessage(schema, f, message, runtimeFile);
+  }
+  for (const service of file.services) {
+    generateService(schema, f, service, runtimeFile, file.proto.package);
+  }
+};
+
 export function generateTs(schema: PluginSchema) {
   const runtimeFile = getRuntimeFile(schema);
 
   for (const file of schema.files) {
-    const f = schema.generateFile(file.name + "_pb.ts");
-    f.preamble(file);
-    for (const enumeration of file.enums) {
-      generateEnum(schema, f, enumeration);
-    }
-    for (const message of file.messages) {
-      generateMessage(schema, f, message, runtimeFile);
-    }
-    for (const service of file.services) {
-      generateService(schema, f, service, runtimeFile, file.proto.package);
-    }
+    generateFile(schema, file, runtimeFile);
   }
 }

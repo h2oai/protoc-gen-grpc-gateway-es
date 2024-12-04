@@ -1,4 +1,5 @@
 import {
+  type DescEnum,
   type DescExtension,
   type DescField,
   type DescMessage,
@@ -23,6 +24,7 @@ import {
   type ResourceDescriptor,
   resource,
 } from "../options/gen/google/api/resource_pb";
+import type { PluginSchema } from "./generateTs";
 
 export const getOpenapiMessageOption = (
   message: DescMessage
@@ -46,7 +48,30 @@ export const getGoogleapisResourceOption = (
   return getOption(message, resource);
 };
 
-export const isWKTMessage = (message: DescMessage) => {
+export const isExternalDependency = (
+  schema: PluginSchema,
+  message: DescEnum | DescMessage
+) => {
+  const internalDependency = schema.files.find(
+    (file) => file.name === message.file.name
+  );
+  return !internalDependency;
+};
+
+// type from @protobuf but unexported
+export type ShapeImport = {
+  readonly kind: "es_shape_ref";
+  desc: DescEnum | DescMessage;
+};
+
+export const isShapeImport = (
+  p: Exclude<Printable, Printable[]>
+): p is ShapeImport =>
+  Boolean(
+    p && typeof p === `object` && `kind` in p && p.kind === `es_shape_ref`
+  );
+
+export const isWKTMessage = (message: DescEnum | DescMessage) => {
   return message.file.proto.package.startsWith("google.protobuf");
 };
 

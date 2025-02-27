@@ -12,6 +12,7 @@ import {
   replacePathParameters,
   toBigIntString,
   toBytesString,
+  unset,
 } from "../src/runtime";
 
 describe(`replacePathParameters`, () => {
@@ -21,8 +22,12 @@ describe(`replacePathParameters`, () => {
       name: "projects/a/documents/b",
       message_id: "XYZ",
     };
-    const replaced = replacePathParameters(path, parameters);
+    const [replaced, modifiedParameters] = replacePathParameters(
+      path,
+      parameters
+    );
     expect(replaced).toBe("/v1/projects/a/documents/b/XYZ");
+    expect(modifiedParameters).toEqual({});
   });
 });
 
@@ -188,5 +193,22 @@ describe("pathPatternToParseRegexp", () => {
     expect(reReady).toBe(
       `projects\\/(?<project>[^/]+)\\/documents\\/(?<document>[^/]+)\\/results\\/(?<result>[^/]+)`
     );
+  });
+});
+
+describe("unset", () => {
+  it(`should remove a key from an object`, () => {
+    const obj = { a: 1, b: 2 };
+    const modified = unset(obj, "a");
+    expect(modified).toEqual({ b: 2 });
+  });
+  it(`should use a structural clone to avoid mutation`, () => {
+    const obj = { a: 1, b: 2 };
+    expect(obj).toEqual({ a: 1, b: 2 });
+  });
+  it(`should handle deeply nested values`, () => {
+    const obj = { a: 1, b: 2, c: { cc: { ccc: 3, cd: 4 } } };
+    const modified = unset(obj, "c.cc.cd");
+    expect(modified).toEqual({ a: 1, b: 2, c: { cc: { ccc: 3 } } } as any);
   });
 });

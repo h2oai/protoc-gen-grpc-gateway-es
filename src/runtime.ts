@@ -152,18 +152,30 @@ export const get = (obj: Record<string, any>, keys: string) => {
   return value;
 };
 
+const unsetRecursive = <T extends Record<string, any>>(
+  obj: T,
+  keys: string[]
+): Partial<T> => {
+  const key = keys.shift()!;
+  if (keys.length === 0) {
+    const { [key]: _, ...other } = obj;
+    return other as any;
+  }
+  return {
+    ...obj,
+    [key]: unsetRecursive(obj[key], keys),
+  };
+};
+
 /**
  * Deletes property from an object with path specified by dot notation.
+ * Returns a new object, does not mutate the original.
  */
-export const unset = (obj: Record<string, any>, keys: string) => {
-  const segments = keys.split(".");
-  let parent = obj;
-  while (typeof parent === `object` && parent && segments.length > 1) {
-    parent = parent[segments.shift()!];
-  }
-  if (typeof parent === `object` && parent && segments.length === 1) {
-    delete parent[segments[0]];
-  }
+export const unset = <T extends Record<string, any>>(
+  obj: T,
+  keys: string
+): Partial<T> => {
+  return unsetRecursive(obj, keys.split("."));
 };
 
 const leadingSlashRe = /^\/+/;
@@ -217,8 +229,9 @@ const pathParameterRe = /{([^}]+)}/g;
 export const replacePathParameters = <RequestMessage>(
   path: string,
   requestMessage?: RequestMessage
-) => {
-  return path.replace(pathParameterRe, (_a, c1) => {
+): [string, Partial<RequestMessage>] => {
+  let requestMessageWOPathParams: Partial<RequestMessage> = requestMessage!;
+  const pathWithParams = path.replace(pathParameterRe, (_a, c1) => {
     const parameterPath = c1.split("=", 2)[0] as string;
     // the path might contain dot notaion to nested fields
     const value = requestMessage && get(requestMessage, parameterPath);
@@ -231,9 +244,13 @@ export const replacePathParameters = <RequestMessage>(
       );
     }
     // TODO: we can validate the value against the pattern specified in the path
-    unset(requestMessage!, parameterPath);
+    requestMessageWOPathParams = unset(
+      requestMessageWOPathParams,
+      parameterPath
+    );
     return value;
   });
+  return [pathWithParams, requestMessageWOPathParams!];
 };
 
 export type RequestConfig = {
@@ -273,8 +290,9 @@ export class RPC<RequestMessage, ResponseMessage> {
    * @param params the request message for the RPC as defined in the proto file
    */
   createRequest(config: RequestConfig, params: RequestMessage): Request {
-    let paramsClone = params && { ...params };
-    const pathWithParams = replacePathParameters(this.path, paramsClone);
+    let partialParams: Partial<RequestMessage> | undefined = params;
+    let pathWithParams = this.path;
+    [pathWithParams, partialParams] = replacePathParameters(this.path, partialParams);
     // we must remove leading slash from the path and add trailing slash to the base path, otherwise only the hostname
     // part of the base path will be used :/
     const url = config.basePath
@@ -285,18 +303,18 @@ export class RPC<RequestMessage, ResponseMessage> {
       : new URL(pathWithParams, (globalThis as any).location.href);
 
     let body: string | undefined = undefined;
-    if (params && this.method !== `DELETE` && this.method !== `GET`) {
+    if (partialParams && this.method !== `DELETE` && this.method !== `GET`) {
       if (this.bodyKey) {
-        body = JSON.stringify(get(params, this.bodyKey));
-        unset(paramsClone!, this.bodyKey);
+        body = JSON.stringify(get(partialParams, this.bodyKey));
+        partialParams = unset(partialParams, this.bodyKey);
       } else {
-        body = JSON.stringify(params);
-        paramsClone = undefined as any;
+        body = JSON.stringify(partialParams);
+        partialParams = undefined;
       }
     }
 
-    if (paramsClone) {
-      for (const [k, v] of Object.entries(paramsClone)) {
+    if (partialParams) {
+      for (const [k, v] of Object.entries(partialParams)) {
         if (Array.isArray(v)) {
           for (const item of v) {
             appendQueryParameter(url.searchParams, k, item);

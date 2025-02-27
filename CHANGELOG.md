@@ -1,5 +1,13 @@
 
 
+## [0.3.1](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.3.0...v0.3.1) (2025-02-27)
+
+
+### Bug Fixes
+
+* false-warning when query-string is undefined ([2ebd23a](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/2ebd23ac66e222fc658316f36495ee7bc58a2d8f))
+* input message is mutated when path or body targets nested field ([308c8e1](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/308c8e14d576d5effbf306487c0c771e12691bd7))
+
 ## [0.3.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.1.6...v0.3.0) (2024-12-04)
 
 

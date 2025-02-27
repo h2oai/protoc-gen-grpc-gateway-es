@@ -290,9 +290,12 @@ export class RPC<RequestMessage, ResponseMessage> {
    * @param params the request message for the RPC as defined in the proto file
    */
   createRequest(config: RequestConfig, params: RequestMessage): Request {
-    let partialParams: Partial<RequestMessage> | undefined = params;
-    let pathWithParams = this.path;
-    [pathWithParams, partialParams] = replacePathParameters(this.path, partialParams);
+    let unconsumedParams: Partial<RequestMessage> | undefined;
+    let pathWithParams: string;
+    [pathWithParams, unconsumedParams] = replacePathParameters(
+      this.path,
+      params
+    );
     // we must remove leading slash from the path and add trailing slash to the base path, otherwise only the hostname
     // part of the base path will be used :/
     const url = config.basePath
@@ -303,18 +306,18 @@ export class RPC<RequestMessage, ResponseMessage> {
       : new URL(pathWithParams, (globalThis as any).location.href);
 
     let body: string | undefined = undefined;
-    if (partialParams && this.method !== `DELETE` && this.method !== `GET`) {
+    if (params && this.method !== `DELETE` && this.method !== `GET`) {
       if (this.bodyKey) {
-        body = JSON.stringify(get(partialParams, this.bodyKey));
-        partialParams = unset(partialParams, this.bodyKey);
+        body = JSON.stringify(get(params, this.bodyKey));
+        unconsumedParams = unset(unconsumedParams, this.bodyKey);
       } else {
-        body = JSON.stringify(partialParams);
-        partialParams = undefined;
+        body = JSON.stringify(params);
+        unconsumedParams = undefined;
       }
     }
 
-    if (partialParams) {
-      for (const [k, v] of Object.entries(partialParams)) {
+    if (unconsumedParams) {
+      for (const [k, v] of Object.entries(unconsumedParams)) {
         if (Array.isArray(v)) {
           for (const item of v) {
             appendQueryParameter(url.searchParams, k, item);

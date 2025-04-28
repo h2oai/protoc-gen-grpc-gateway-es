@@ -88,7 +88,7 @@ function generateType(
 ): { type: Printable; nullable?: boolean } {
   if (Array.isArray(typing)) {
     // in case of an array, there is _usually_ the type in first position and there can be an array `[]` notation at the
-    // second position, so we are just intereseted in the first position. Let's see how far this will get us.
+    // second position, so we are just interested in the first position. Let's see how far this will get us.
     const resolved = generateType(
       typing[0],
       required,
@@ -110,7 +110,7 @@ function generateType(
       case `Duration`:
       case `Timestamp`:
         // the Duration and Timestamp are serialized to string in gRPC-gateway, but we also need them to be nullable
-        // otherwiser it is impossible to unset them.
+        // otherwise it is impossible to unset them.
         return {
           type: `string`,
           nullable:
@@ -149,8 +149,9 @@ function generateField(
     googleapisFieldBehaviorOptions,
     runtimeFile
   );
+  const extendNullType = Boolean(nullable || (schema.options.emptyAsNull && !required && field.fieldKind !== `scalar`))
   f.print`${field.localName}${required ? "" : "?"}: ${type}${
-    !nullable ? "" : " | null"
+    extendNullType ? " | null" : ""
   };`;
   const typeNonArray: Exclude<Printable, Printable[]> = Array.isArray(type)
     ? type[0]

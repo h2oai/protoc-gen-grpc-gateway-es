@@ -437,3 +437,38 @@ export enum MultipleNested_Nested_State {
 }`
   );
 });
+
+test(`should type the non-required non-scalar fields as possible 'null' when empty_as_null option is set`, async () => {
+  const inputFileName = `empty_as_null.proto`;
+  const req = await getCodeGeneratorRequest(`target=ts,empty_as_null=true`, [
+    {
+      name: inputFileName,
+      content: `syntax = "proto3";
+
+message MessageA {
+  string foo = 1;
+  MessageB bar = 2;
+  map<string, string> baz = 3;
+};
+
+message MessageB {
+  string bar = 1;
+}`,
+    },
+  ]);
+  const resp = getResponse(req);
+  const outputFile = findResponseForInputFile(resp, inputFileName);
+  assertTypeScript(
+    outputFile.content!,
+    `
+export type MessageA = {
+  foo?: string;
+  bar?: MessageB | null;
+  baz?: { [key: string]: string } | null;
+}
+
+export type MessageB = {
+  bar?: string;
+}`
+  );
+});

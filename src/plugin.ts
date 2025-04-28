@@ -8,7 +8,10 @@ import { name, version } from "../package.json" assert { type: "json" };
  */
 const OPT_GENERATE_NAME_PARSER = "generate_name_parser";
 
+const OPT_EMPTY_AS_NULL = "empty_as_null";
+
 export type PluginOptions = {
+  emptyAsNull: boolean;
   generateNameParser: boolean;
 };
 
@@ -19,8 +22,16 @@ function parseOptions(
   }[]
 ): PluginOptions {
   let generateNameParser = false;
+  let emptyAsNull = false;
   for (const { key, value } of options) {
     switch (key) {
+      case OPT_EMPTY_AS_NULL: {
+        if (!["true", "false"].includes(value)) {
+          throw "please provide true or false";
+        }
+        emptyAsNull = value === "true";
+        break;
+      }
       case OPT_GENERATE_NAME_PARSER: {
         if (!["true", "false"].includes(value)) {
           throw "please provide true or false";
@@ -32,7 +43,7 @@ function parseOptions(
         throw new Error();
     }
   }
-  return { generateNameParser };
+  return { emptyAsNull, generateNameParser };
 }
 
 export const createPlugin = () =>

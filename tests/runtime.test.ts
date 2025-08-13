@@ -2,6 +2,8 @@ import { expect, test, describe, it } from "bun:test";
 
 import { base64Encode } from "@bufbuild/protobuf/wire";
 import fc from "fast-check";
+import uInt8ArrayFromBase64 from "es-arraybuffer-base64/Uint8Array.fromBase64";
+import uInt8ArrayToBase64 from "es-arraybuffer-base64/Uint8Array.prototype.toBase64";
 
 import {
   BigIntString,
@@ -120,6 +122,16 @@ test(`the method for binary enc/de-coding conforms to @bufbuild etalon`, async (
   expect(encodedActual as string).toBe(encodedExpected);
   const decodedActual = bytesStringToUint8Array(encodedActual);
   expect(decodedActual).toEqual(inputBinary);
+});
+
+test(`the new standard Uint8Array methods works as our toBytesString`, () => {
+  const input = `ăѣ𝔠ծềſģȟᎥ𝒋ǩľḿꞑȯ𝘱𝑞𝗋𝘴ȶ𝞄𝜈ψ𝒙𝘆𝚣1234567890!@#$%^&*()-_=+[{]};:'",<.>/?~`;
+  const inputBinary = new TextEncoder().encode(input);
+  const encodedOur = base64Encode(inputBinary); // encoded with @protobuf/wire function that is the same as our toBytesString
+  const encodedStandard = uInt8ArrayToBase64(inputBinary); // encoded with the new standard Uint8Array#toBase64 via a polyfill es-arraybuffer-base64
+  expect(encodedOur as string).toBe(encodedStandard);
+  const decoded = uInt8ArrayFromBase64(encodedOur); // decode with the new standard Uint8Array.fromBase64 via a polyfill es-arraybuffer-base64
+  expect(decoded).toEqual(inputBinary);
 });
 
 test(`the toBigIntString function accepts wide range of inputs`, () => {

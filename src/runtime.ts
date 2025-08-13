@@ -50,95 +50,108 @@ decTable["_".charCodeAt(0)] = encTable.indexOf("/");
  * Converts Uint8Array to BytesString. Thanks @timostamm !
  * @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L42
  */
-export const toBytesString = (bytes: Uint8Array): BytesString => {
-  const base64 = [];
-  let groupPos = 0, // position in base64 group
-    p = 0; // carry over from previous byte
+export const toBytesString: (b: Uint8Array) => BytesString =
+  // @ts-expect-error the Uint8Array.toBase64 is not-yet defined in TypeScript
+  typeof Uint8Array.prototype.toBase64 === `function`
+    ? // @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array/toBase64
+      // @ts-expect-error the Uint8Array.toBase64 is not-yet defined in TypeScript
+      (b) => b.toBase64()
+    : (bytes) => {
+        const base64 = [];
+        let groupPos = 0, // position in base64 group
+          p = 0; // carry over from previous byte
 
-  for (const b of bytes) {
-    switch (groupPos) {
-      case 0:
-        base64.push(encTable[b >> 2]);
-        p = (b & 3) << 4;
-        groupPos = 1;
-        break;
-      case 1:
-        base64.push(encTable[p | (b >> 4)]);
-        p = (b & 15) << 2;
-        groupPos = 2;
-        break;
-      case 2:
-        base64.push(encTable[p | (b >> 6)]);
-        base64.push(encTable[b & 63]);
-        groupPos = 0;
-        break;
-    }
-  }
+        for (const b of bytes) {
+          switch (groupPos) {
+            case 0:
+              base64.push(encTable[b >> 2]);
+              p = (b & 3) << 4;
+              groupPos = 1;
+              break;
+            case 1:
+              base64.push(encTable[p | (b >> 4)]);
+              p = (b & 15) << 2;
+              groupPos = 2;
+              break;
+            case 2:
+              base64.push(encTable[p | (b >> 6)]);
+              base64.push(encTable[b & 63]);
+              groupPos = 0;
+              break;
+          }
+        }
 
-  // add output padding
-  if (groupPos) {
-    base64.push(encTable[p]);
-    base64.push("=");
-    if (groupPos == 1) base64.push("=");
-  }
+        // add output padding
+        if (groupPos) {
+          base64.push(encTable[p]);
+          base64.push("=");
+          if (groupPos == 1) base64.push("=");
+        }
 
-  return base64.join(``) as BytesString;
-};
+        return base64.join(``) as BytesString;
+      };
 
 /**
- * Converts BytesString to Uint8Array. Thanks @timostamm !
- * @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L97
+ * Converts BytesString to Uint8Array.
  */
-export const bytesStringToUint8Array = (base64Str: BytesString): Uint8Array => {
-  // estimate byte size, not accounting for inner padding and whitespace
-  let es = (base64Str.length * 3) / 4;
-  if (base64Str.endsWith(`==`)) es -= 2;
-  else if (base64Str.endsWith(`=`)) es -= 1;
+export const bytesStringToUint8Array: (bs: BytesString) => Uint8Array =
+  // @ts-expect-error the Uint8Array.fromBase64 is not-yet defined in TypeScript
+  typeof Uint8Array.fromBase64 === `function`
+    ? // @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array/fromBase64
+      // @ts-expect-error the Uint8Array.fromBase64 is not-yet defined in TypeScript
+      (bs) => Uint8Array.fromBase64(bs)
+    : // Thanks @timostamm !
+      // @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L97
+      (base64Str) => {
+        // estimate byte size, not accounting for inner padding and whitespace
+        let es = (base64Str.length * 3) / 4;
+        if (base64Str.endsWith(`==`)) es -= 2;
+        else if (base64Str.endsWith(`=`)) es -= 1;
 
-  const bytes = new Uint8Array(es);
-  let bytePos = 0, // position in byte array
-    groupPos = 0, // position in base64 group
-    b, // current byte
-    p = 0; // previous byte
-  for (let i = 0, l = base64Str.length; i < l; i++) {
-    b = decTable[base64Str.charCodeAt(i)];
-    if (b === undefined) {
-      switch (base64Str[i]) {
-        case "=":
-          groupPos = 0; // reset state when padding found
-        case "\n":
-        case "\r":
-        case "\t":
-        case " ":
-          continue; // skip white-space, and padding
-        default:
-          throw Error("invalid base64 string.");
-      }
-    }
-    switch (groupPos) {
-      case 0:
-        p = b;
-        groupPos = 1;
-        break;
-      case 1:
-        bytes[bytePos++] = (p << 2) | ((b & 48) >> 4);
-        p = b;
-        groupPos = 2;
-        break;
-      case 2:
-        bytes[bytePos++] = ((p & 15) << 4) | ((b & 60) >> 2);
-        p = b;
-        groupPos = 3;
-        break;
-      case 3:
-        bytes[bytePos++] = ((p & 3) << 6) | b;
-        groupPos = 0;
-        break;
-    }
-  }
-  if (groupPos == 1) throw Error("invalid base64 string.");
-  return bytes.subarray(0, bytePos);
-};
+        const bytes = new Uint8Array(es);
+        let bytePos = 0, // position in byte array
+          groupPos = 0, // position in base64 group
+          b, // current byte
+          p = 0; // previous byte
+        for (let i = 0, l = base64Str.length; i < l; i++) {
+          b = decTable[base64Str.charCodeAt(i)];
+          if (b === undefined) {
+            switch (base64Str[i]) {
+              case "=":
+                groupPos = 0; // reset state when padding found
+              case "\n":
+              case "\r":
+              case "\t":
+              case " ":
+                continue; // skip white-space, and padding
+              default:
+                throw Error("invalid base64 string.");
+            }
+          }
+          switch (groupPos) {
+            case 0:
+              p = b;
+              groupPos = 1;
+              break;
+            case 1:
+              bytes[bytePos++] = (p << 2) | ((b & 48) >> 4);
+              p = b;
+              groupPos = 2;
+              break;
+            case 2:
+              bytes[bytePos++] = ((p & 15) << 4) | ((b & 60) >> 2);
+              p = b;
+              groupPos = 3;
+              break;
+            case 3:
+              bytes[bytePos++] = ((p & 3) << 6) | b;
+              groupPos = 0;
+              break;
+          }
+        }
+        if (groupPos == 1) throw Error("invalid base64 string.");
+        return bytes.subarray(0, bytePos);
+      };
 
 /**
  * Retrieves property from an object with path specified by dot notation.

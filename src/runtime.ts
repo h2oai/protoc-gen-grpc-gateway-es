@@ -245,11 +245,17 @@ export const replacePathParameters = <RequestMessage>(
     // the path might contain dot notaion to nested fields
     const value = requestMessage && get(requestMessage, parameterPath);
     if (value == null) {
-      throw new Error(`missing path parameter: ${parameterPath}`);
+      throw new Error(`Missing required path parameter: ${parameterPath}`);
     }
-    if (typeof value !== "string") {
+    if (typeof value === "string") {
+      if (value === "") {
+        throw new Error(
+          `Path parameter "${parameterPath}" must not be empty`,
+        );
+      }
+    } else if (typeof value !== "number" && typeof value !== "bigint") {
       throw new Error(
-        `path parameter "${parameterPath}" must be a string, received "${value}" which is "${typeof value}"`,
+        `path parameter "${parameterPath}" must be a string, number, or bigint, received "${value}" which is "${typeof value}"`,
       );
     }
     // TODO: we can validate the value against the pattern specified in the path
@@ -257,7 +263,7 @@ export const replacePathParameters = <RequestMessage>(
       requestMessageWOPathParams,
       parameterPath,
     );
-    return value;
+    return String(value);
   });
   return [pathWithParams, requestMessageWOPathParams!];
 };

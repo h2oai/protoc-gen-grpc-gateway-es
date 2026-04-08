@@ -12,6 +12,7 @@ module.exports = {
   github: {
     release: true,
     releaseName: `v${version}`,
+    skipChecks: true,
   },
   hooks: {
     "before:init": "bun test && bun run build",

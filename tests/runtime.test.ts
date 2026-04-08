@@ -26,9 +26,52 @@ describe(`replacePathParameters`, () => {
     };
     const [replaced, modifiedParameters] = replacePathParameters(
       path,
-      parameters
+      parameters,
     );
     expect(replaced).toBe("/v1/projects/a/documents/b/XYZ");
+    expect(modifiedParameters).toEqual({});
+  });
+  it(`should throw if a required path parameter is missing`, () => {
+    const path = "/v1/{name=projects/*/documents/*}/{message_id}";
+    const parameters = {
+      name: "projects/a/documents/b",
+    };
+    expect(() => replacePathParameters(path, parameters)).toThrow(
+      `Missing required path parameter: message_id`,
+    );
+  });
+  it(`should throw if a path parameter is set to an empty string`, () => {
+    const path = "/v1/{name=projects/*/documents/*}/{message_id}";
+    const parameters = {
+      name: "",
+      message_id: "XYZ",
+    };
+    expect(() => replacePathParameters(path, parameters)).toThrow(
+      `Path parameter "name" must not be empty`,
+    );
+  });
+  it(`should accept number as a path parameter`, () => {
+    const path = "/v1/{id}";
+    const parameters = {
+      id: 123,
+    };
+    const [replaced, modifiedParameters] = replacePathParameters(
+      path,
+      parameters,
+    );
+    expect(replaced).toBe("/v1/123");
+    expect(modifiedParameters).toEqual({});
+  });
+  it(`should accept BigInt as a path parameter`, () => {
+    const path = "/v1/{id}";
+    const parameters = {
+      id: BigInt("12345678901234567890"),
+    };
+    const [replaced, modifiedParameters] = replacePathParameters(
+      path,
+      parameters,
+    );
+    expect(replaced).toBe("/v1/12345678901234567890");
     expect(modifiedParameters).toEqual({});
   });
 });
@@ -59,7 +102,7 @@ describe(`RPC`, () => {
     const request = rpc.createRequest(config, parameters);
     // the `flip.name` should be in the path, the `updateMask` should be in the queryString
     expect(request.url).toBe(
-      `https://example.test/v1/flap?updateMask=flop.flup`
+      `https://example.test/v1/flap?updateMask=flop.flup`,
     );
     const bodyContent = await new Response(request.body).text();
     // the body should contain the `flip` object, b/c/ the `bodyPath` was set to `flip`
@@ -77,7 +120,7 @@ describe(`RPC`, () => {
     const request = rpc.createRequest(config, parameters);
     // the `flop` shuld be in the queryString
     expect(request.url).toBe(
-      `https://example.test/v1/flap?flop=flup&flop=flep`
+      `https://example.test/v1/flap?flop=flup&flop=flep`,
     );
   });
 
@@ -175,14 +218,14 @@ describe("getNameParser", () => {
           const pattern = `projects/{project}/documents/{document}`;
           const parser = getNameParser(pattern);
           const parsed = parser.parse(
-            `projects/${segmentA}/documents/${segmentB}`
+            `projects/${segmentA}/documents/${segmentB}`,
           );
           expect(parsed).toEqual({
             project: segmentA,
             document: segmentB,
           });
-        }
-      )
+        },
+      ),
     );
   });
   it(`should compile a according to the pattern`, () => {
@@ -200,10 +243,10 @@ describe("getNameParser", () => {
 describe("pathPatternToParseRegexp", () => {
   it(`should convert a path pattern to a regular expression ready string`, () => {
     const reReady = pathPatternToParseRegexp(
-      `projects/{project}/documents/{document}/results/{result}`
+      `projects/{project}/documents/{document}/results/{result}`,
     );
     expect(reReady).toBe(
-      `projects\\/(?<project>[^/]+)\\/documents\\/(?<document>[^/]+)\\/results\\/(?<result>[^/]+)`
+      `projects\\/(?<project>[^/]+)\\/documents\\/(?<document>[^/]+)\\/results\\/(?<result>[^/]+)`,
     );
   });
 });

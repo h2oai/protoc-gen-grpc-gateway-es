@@ -1,7 +1,7 @@
 import { createEcmaScriptPlugin } from "@bufbuild/protoplugin";
 
 import { generateTs } from "./generateTs.js";
-import { name, version } from "../package.json" assert { type: "json" };
+import { name, version } from "../package.json" with { type: "json" };
 
 /**
  * Boolean option that turns on generation of the _resource name_ compiler/parser.

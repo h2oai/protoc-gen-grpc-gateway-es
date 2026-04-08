@@ -111,7 +111,53 @@ There are also a few options specific to this plugin
 
 | Option                 | Type    | Default |
 | ---------------------- | ------- | ------- |
+| `empty_as_null`        | boolean | `false` |
 | `generate_name_parser` | boolean | `false` |
+
+##### `empty_as_null`
+
+Adds `| null` to the type of optional non-scalar (message) fields. This is useful when working with gRPC-gateway [PATCH endpoints that use implicit field masks](https://grpc-ecosystem.github.io/grpc-gateway/docs/mapping/patch_feature/).
+
+When a PATCH request message contains exactly one `FieldMask` field, gRPC-gateway can automatically populate it from the JSON request body — the gateway inspects which fields are present in the JSON and builds the mask for you. This means that _omitting_ an optional message field from the request tells the gateway "do not touch this field", while _including_ it means "update this field". The problem arises when you want to _clear_ an optional message field: simply omitting it won't clear it, the gateway will just leave it unchanged. To clear such a field, you need to either list it explicitly in the `update_mask` or send it as `null` in the JSON body.
+
+Without this option, the generated TypeScript type for an optional message field is `field?: Message`, which does not allow passing `null`. With `empty_as_null=true`, the type becomes `field?: Message | null`, so you can express the intent to clear the field.
+
+Note that this is a request-side concern only. Server responses will never contain `null` for these fields — they will either be present or omitted. The `| null` in the type is a trade-off that prioritizes correct request typing over strict response typing.
+
+**_Example:_**
+
+```protobuf
+message UpdateBookRequest {
+  Book book = 1;
+  google.protobuf.FieldMask update_mask = 2;
+}
+
+message Book {
+  string name = 1;
+  string title = 2;
+  Author author = 3; // optional message field
+}
+```
+
+Without `empty_as_null`:
+
+```TypeScript
+export type Book = {
+  name?: string;
+  title?: string;
+  author?: Author; // cannot pass null to clear
+}
+```
+
+With `empty_as_null=true`:
+
+```TypeScript
+export type Book = {
+  name?: string;
+  title?: string;
+  author?: Author | null; // pass null to clear the author
+}
+```
 
 ##### `generate_name_parser`
 

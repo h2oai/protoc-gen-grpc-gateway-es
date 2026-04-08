@@ -1,4 +1,18 @@
+# Changelog
 
+## [0.4.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.3.1...v0.4.0) (2026-04-08)
+
+### Features
+
+* introduce "empty_as_null" option ([a026ffc](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/a026ffc213f08cdb402ffa817ea34e2ae6fdccf0))
+
+### Bug Fixes
+
+* allow pass number as path-parameter and disallow an empty string ([b98c23f](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/b98c23f4b82d70a305d9f08a5fb1037f050c31dd))
+
+### Performance Improvements
+
+* use the new Uint8Array methods where available ([e47fecd](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/e47fecd8af98b621e7b37d7cf294c34bd75e9f4e))
 
 ## [0.3.1](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.3.0...v0.3.1) (2025-02-27)
 

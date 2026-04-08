@@ -7,7 +7,7 @@ import {
   getOption,
   ScalarType,
 } from "@bufbuild/protobuf";
-import { scalarTypeScriptType } from "@bufbuild/protobuf/codegenv1";
+import { scalarTypeScriptType } from "@bufbuild/protobuf/codegenv2";
 import {
   isWrapperDesc,
   StructSchema,
@@ -27,13 +27,13 @@ import {
 import type { PluginSchema } from "./generateTs";
 
 export const getOpenapiMessageOption = (
-  message: DescMessage
+  message: DescMessage,
 ): OpenApiV2Schema => {
   return getOption(message, openapiv2_schema);
 };
 
 export const getGoogleapisHttpMethodOption = (
-  method: DescMethod
+  method: DescMethod,
 ): GoogleapisHttpRule => {
   return getOption(method, http);
 };
@@ -43,17 +43,17 @@ export const getGoogleapisFieldBehaviorOption = (field: DescField) => {
 };
 
 export const getGoogleapisResourceOption = (
-  message: DescMessage
+  message: DescMessage,
 ): ResourceDescriptor => {
   return getOption(message, resource);
 };
 
 export const isExternalDependency = (
   schema: PluginSchema,
-  message: DescEnum | DescMessage
+  message: DescEnum | DescMessage,
 ) => {
   const internalDependency = schema.files.find(
-    (file) => file.name === message.file.name
+    (file) => file.name === message.file.name,
   );
   return !internalDependency;
 };
@@ -65,10 +65,10 @@ export type ShapeImport = {
 };
 
 export const isShapeImport = (
-  p: Exclude<Printable, Printable[]>
+  p: Exclude<Printable, Printable[]>,
 ): p is ShapeImport =>
   Boolean(
-    p && typeof p === `object` && `kind` in p && p.kind === `es_shape_ref`
+    p && typeof p === `object` && `kind` in p && p.kind === `es_shape_ref`,
   );
 
 export const isWKTMessage = (message: DescEnum | DescMessage) => {
@@ -141,7 +141,7 @@ export const getDescName = (d: DescEnum | DescMessage) => {
 
 function messageFieldTypeScriptType(
   field: (DescField | DescExtension) & { message: DescMessage },
-  imports: GeneratedFile["runtime"]
+  imports: GeneratedFile["runtime"],
 ): Printable {
   if (
     isWrapperDesc(field.message) &&
@@ -165,7 +165,7 @@ function messageFieldTypeScriptType(
 
 export function fieldTypeScriptType(
   field: DescField | DescExtension,
-  imports: GeneratedFile["runtime"]
+  imports: GeneratedFile["runtime"],
 ): {
   typing: Printable;
   optional: boolean;
@@ -198,13 +198,13 @@ export function fieldTypeScriptType(
               kind: "es_shape_ref",
               desc: field.enum,
             },
-            "[]"
+            "[]",
           );
           break;
         case "scalar":
           typing.push(
             scalarTypeScriptType(field.scalar, field.longAsString),
-            "[]"
+            "[]",
           );
           break;
         case "message": {

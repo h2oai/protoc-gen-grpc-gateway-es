@@ -24,7 +24,7 @@ export const bigIntStringToString: (value: BigIntString) => string = String;
  * Converts a JavaScript values to BigIntString type.
  */
 export const toBigIntString: (
-  value: string | bigint | number
+  value: string | bigint | number,
 ) => BigIntString = (v) => String(BigInt(v)) as BigIntString;
 
 /**
@@ -51,11 +51,9 @@ decTable["_".charCodeAt(0)] = encTable.indexOf("/");
  * @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L42
  */
 export const toBytesString: (b: Uint8Array) => BytesString =
-  // @ts-expect-error the Uint8Array.toBase64 is not-yet defined in TypeScript
   typeof Uint8Array.prototype.toBase64 === `function`
     ? // @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array/toBase64
-      // @ts-expect-error the Uint8Array.toBase64 is not-yet defined in TypeScript
-      (b) => b.toBase64()
+      (b) => b.toBase64() as BytesString
     : (bytes) => {
         const base64 = [];
         let groupPos = 0, // position in base64 group
@@ -95,10 +93,8 @@ export const toBytesString: (b: Uint8Array) => BytesString =
  * Converts BytesString to Uint8Array.
  */
 export const bytesStringToUint8Array: (bs: BytesString) => Uint8Array =
-  // @ts-expect-error the Uint8Array.fromBase64 is not-yet defined in TypeScript
   typeof Uint8Array.fromBase64 === `function`
     ? // @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array/fromBase64
-      // @ts-expect-error the Uint8Array.fromBase64 is not-yet defined in TypeScript
       (bs) => Uint8Array.fromBase64(bs)
     : // Thanks @timostamm !
       // @see https://github.com/bufbuild/protobuf-es/blob/5893ec6efb7111d7dbc263aeeb75d693426cacdd/packages/protobuf/src/proto-base64.ts#L97
@@ -167,7 +163,7 @@ export const get = (obj: Record<string, any>, keys: string) => {
 
 const unsetRecursive = <T extends Record<string, any>>(
   obj: T,
-  keys: string[]
+  keys: string[],
 ): Partial<T> => {
   const key = keys.shift()!;
   if (keys.length === 0) {
@@ -186,7 +182,7 @@ const unsetRecursive = <T extends Record<string, any>>(
  */
 export const unset = <T extends Record<string, any>>(
   obj: T,
-  keys: string
+  keys: string,
 ): Partial<T> => {
   return unsetRecursive(obj, keys.split("."));
 };
@@ -201,7 +197,7 @@ export const addTrailingSlash = (path: string) => {
 };
 
 export const isScalarType = (
-  value: any
+  value: any,
 ): value is boolean | number | string => {
   switch (typeof value) {
     case `object`:
@@ -223,13 +219,13 @@ export const isScalarType = (
 export const appendQueryParameter = (
   searchParams: URLSearchParams,
   key: string,
-  value: any
+  value: any,
 ) => {
   if (isScalarType(value)) {
     searchParams.append(key, String(value));
   } else if (typeof value === `object`) {
     console.warn(
-      `Property "${key}" in request message is not send in request body, and cannot be send in a query-string parameters because it contains a value of type _object_. Property ${key}" will be skipped.`
+      `Property "${key}" in request message is not send in request body, and cannot be send in a query-string parameters because it contains a value of type _object_. Property ${key}" will be skipped.`,
     );
   }
 };
@@ -241,7 +237,7 @@ const pathParameterRe = /{([^}]+)}/g;
  */
 export const replacePathParameters = <RequestMessage>(
   path: string,
-  requestMessage?: RequestMessage
+  requestMessage?: RequestMessage,
 ): [string, Partial<RequestMessage>] => {
   let requestMessageWOPathParams: Partial<RequestMessage> = requestMessage!;
   const pathWithParams = path.replace(pathParameterRe, (_a, c1) => {
@@ -253,13 +249,13 @@ export const replacePathParameters = <RequestMessage>(
     }
     if (typeof value !== "string") {
       throw new Error(
-        `path parameter "${parameterPath}" must be a string, received "${value}" which is "${typeof value}"`
+        `path parameter "${parameterPath}" must be a string, received "${value}" which is "${typeof value}"`,
       );
     }
     // TODO: we can validate the value against the pattern specified in the path
     requestMessageWOPathParams = unset(
       requestMessageWOPathParams,
-      parameterPath
+      parameterPath,
     );
     return value;
   });
@@ -307,14 +303,14 @@ export class RPC<RequestMessage, ResponseMessage> {
     let pathWithParams: string;
     [pathWithParams, unconsumedParams] = replacePathParameters(
       this.path,
-      params
+      params,
     );
     // we must remove leading slash from the path and add trailing slash to the base path, otherwise only the hostname
     // part of the base path will be used :/
     const url = config.basePath
       ? new URL(
           removeLeadingSlash(pathWithParams),
-          addTrailingSlash(config.basePath)
+          addTrailingSlash(config.basePath),
         )
       : new URL(pathWithParams, (globalThis as any).location.href);
 
@@ -381,7 +377,7 @@ export const pathPatternToParseRegexp = (pathPattern: string): string =>
   pathPattern.replace(/(\/)|(?:\{(\w+)\})/g, ((
     _match: string,
     forwardSlash: string,
-    pathParameter: string
+    pathParameter: string,
   ) => {
     if (forwardSlash) {
       return `\\/`;
@@ -401,7 +397,7 @@ const reProtoPathPattern = /{([^/]+)}/g;
  * @param parseCompile.parse a function that takes a resource name and returns an object with the path parameters
  */
 export function getNameParser<Keys extends string>(
-  pattern: string
+  pattern: string,
 ): {
   compile: (params: { [key in Keys]: string }) => string;
   parse: (name: string) => { [key in Keys]: string };
@@ -411,7 +407,7 @@ export function getNameParser<Keys extends string>(
   const compile = (params: { [key in Keys]: string }) =>
     pattern.replace(
       reProtoPathPattern,
-      (_match, paramName: Keys) => params[paramName]
+      (_match, paramName: Keys) => params[paramName],
     );
   const parse = (name: string) => {
     const match = name.match(reParse);

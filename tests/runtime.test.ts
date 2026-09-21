@@ -14,6 +14,7 @@ import {
   replacePathParameters,
   toBigIntString,
   toBytesString,
+  toPathPattern,
   unset,
 } from "../src/runtime";
 
@@ -248,6 +249,63 @@ describe("pathPatternToParseRegexp", () => {
     expect(reReady).toBe(
       `projects\\/(?<project>[^/]+)\\/documents\\/(?<document>[^/]+)\\/results\\/(?<result>[^/]+)`,
     );
+  });
+});
+
+describe("toPathPattern", () => {
+  it(`should replace the curly braces with the colon notation`, () => {
+    expect(toPathPattern(`/api/v1/jobs/{jobId}/progress/{nextIndex}`)).toBe(
+      `/api/v1/jobs/:jobId/progress/:nextIndex`,
+    );
+  });
+  it(`should leave a path without parameters untouched`, () => {
+    expect(toPathPattern(`/v1/simple_message`)).toBe(`/v1/simple_message`);
+  });
+  it(`should sanitize a parameter addressing a nested field`, () => {
+    expect(toPathPattern(`/v1/{flip.name}`)).toBe(`/v1/:flip_name`);
+  });
+  it(`should escape the colon of a custom method`, () => {
+    expect(toPathPattern(`/v1/deployments:count`)).toBe(
+      `/v1/deployments\\:count`,
+    );
+  });
+  it(`should expand a resource name pattern and name the parameters after the collection`, () => {
+    expect(toPathPattern(`/v1/{nameTest=projects/*/documents/*}`)).toBe(
+      `/v1/projects/:project/documents/:document`,
+    );
+    expect(toPathPattern(`/v1/{parent=shelves/*}/books`)).toBe(
+      `/v1/shelves/:shelve/books`,
+    );
+  });
+  it(`should expand a resource name pattern followed by a custom method`, () => {
+    expect(
+      toPathPattern(`/v1/{nameTest=projects/*/documents/*}:customMethod`),
+    ).toBe(`/v1/projects/:project/documents/:document\\:customMethod`);
+  });
+  it(`should translate the "**" wildcard into a multi-segment pattern`, () => {
+    expect(toPathPattern(`/v1/{name=shelves/*/books/**}`)).toBe(
+      `/v1/shelves/:shelve/books/:book(.+)`,
+    );
+  });
+  it(`should fall back to the parameter name when the wildcard has no collection`, () => {
+    expect(toPathPattern(`/v1/{name=*}`)).toBe(`/v1/:name`);
+  });
+  it(`should prepend the basePath without escaping it`, () => {
+    // a root-relative pattern resolves against the origin only, so a service mounted on a sub-path needs the basePath
+    expect(
+      toPathPattern(`/v1/{name=projects/*}`, `https://api.test/gateway`),
+    ).toBe(`https://api.test/gateway/v1/projects/:project`);
+    expect(
+      toPathPattern(`/v1/{name=projects/*}`, `https://api.test/gateway/`),
+    ).toBe(`https://api.test/gateway/v1/projects/:project`);
+    expect(toPathPattern(`/v1/{name=projects/*}`, `*`)).toBe(
+      `*/v1/projects/:project`,
+    );
+  });
+  it(`should deduplicate colliding parameter names`, () => {
+    expect(
+      toPathPattern(`/v1/{name=documents/*}/{other=documents/*}`),
+    ).toBe(`/v1/documents/:document/documents/:document_2`);
   });
 });
 

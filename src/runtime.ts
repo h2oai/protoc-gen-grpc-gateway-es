@@ -12,7 +12,7 @@ export type BigIntString = string & { [__type__]: `BigIntString` };
 export const bigIntStringToBigInt: (value: BigIntString) => bigint = BigInt;
 /**
  * Converts the BigIntString into a regular JavaScript number.
- * Potentialy dangerous, use `Number.isSafeInteger()` after conversion.
+ * Potentially dangerous, use `Number.isSafeInteger()` after conversion.
  * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isSafeInteger
  */
 export const bigIntStringToNumber: (value: BigIntString) => number = Number;
@@ -249,9 +249,7 @@ export const replacePathParameters = <RequestMessage>(
     }
     if (typeof value === "string") {
       if (value === "") {
-        throw new Error(
-          `Path parameter "${parameterPath}" must not be empty`,
-        );
+        throw new Error(`Path parameter "${parameterPath}" must not be empty`);
       }
     } else if (typeof value !== "number" && typeof value !== "bigint") {
       throw new Error(
@@ -393,6 +391,76 @@ export const pathPatternToParseRegexp = (pathPattern: string): string =>
     }
   }) as any);
 
+// path-to-regexp only accepts word characters in a parameter name, but a path parameter may use the dot notation to
+// address a nested field, e.g. `{flip.name}`
+const toPathPatternParamName = (name: string) => name.replace(/\W/g, `_`);
+// the path segment preceding a wildcard is a plural collection identifier per Google AIP, e.g. `documents/*`
+const singularize = (segment: string) =>
+  segment.length > 1 && segment.endsWith(`s`) ? segment.slice(0, -1) : segment;
+// characters that path-to-regexp treats as syntax - most notably the colon used by AIP custom methods
+const escapePathPatternLiteral = (literal: string) =>
+  literal.replace(/[:\\*+?()]/g, (char) => `\\${char}`);
+
+/**
+ * Converts the `RPC.path`, which is in the `google.api.http` format, into a path pattern understood by Mock Service
+ * Worker and other path-to-regexp based routers. The `{parameter}` wrappers are replaced with `:parameter`, the
+ * `{name=projects/*}` patterns are expanded literally and the remaining special characters are escaped.
+ * @param path the `RPC.path`
+ * @param basePath optional prefix, joined the same way as in `RPC#createRequest`. Pass the `RequestConfig.basePath` to
+ * match a service mounted on a sub-path, because a root-relative pattern resolves against the origin only and would
+ * drop the sub-path. Pass `*` to match any origin and sub-path.
+ * @example toPathPattern(`/v1/{name=projects/*}:count`) // `/v1/projects/:project\\:count`
+ * @example toPathPattern(`/v1/{name=projects/*}`, `https://api.test/gateway`) // `https://api.test/gateway/v1/projects/:project`
+ */
+export const toPathPattern = (path: string, basePath?: string): string => {
+  const usedNames = new Set<string>();
+  const uniqueName = (name: string) => {
+    let unique = name;
+    for (let i = 2; usedNames.has(unique); i++) {
+      unique = `${name}_${i}`;
+    }
+    usedNames.add(unique);
+    return unique;
+  };
+  let pattern = ``;
+  let lastIndex = 0;
+  for (const match of path.matchAll(pathParameterRe)) {
+    pattern += escapePathPatternLiteral(path.slice(lastIndex, match.index));
+    lastIndex = match.index + match[0].length;
+    const [parameterPath, parameterPattern] = match[1].split("=", 2);
+    // the parameter name is the fallback for wildcards which are not preceded by a collection identifier
+    const fallbackName = toPathPatternParamName(parameterPath);
+    if (!parameterPattern) {
+      pattern += `:${uniqueName(fallbackName)}`;
+      continue;
+    }
+    let collection: string | undefined;
+    pattern += parameterPattern
+      .split("/")
+      .map((segment) => {
+        if (segment !== `*` && segment !== `**`) {
+          collection = segment;
+          return escapePathPatternLiteral(segment);
+        }
+        const name = uniqueName(
+          collection
+            ? toPathPatternParamName(singularize(collection))
+            : fallbackName,
+        );
+        // `**` spans multiple segments. The custom pattern must not contain `*` nor `?`, because Mock Service Worker
+        // rewrites `*` into a nested capturing group and truncates the path at the first `?`.
+        return segment === `**` ? `:${name}(.+)` : `:${name}`;
+      })
+      .join("/");
+  }
+  pattern += escapePathPatternLiteral(path.slice(lastIndex));
+  // the basePath is deliberately not escaped, Mock Service Worker escapes the `://` of the protocol and the `:` of the
+  // port on its own and would double-escape ours
+  return basePath
+    ? addTrailingSlash(basePath) + removeLeadingSlash(pattern)
+    : pattern;
+};
+
 const reProtoPathPattern = /{([^/]+)}/g;
 /**
  * For a protobuf option google.api.resource.pattern, returns a resource name parser and compiler.
@@ -425,3 +493,26 @@ export function getNameParser<Keys extends string>(
   };
   return { compile, parse };
 }
+
+// @see https://grpc.github.io/grpc/core/md_doc_statuscodes.html
+export const GrpcStatusCode = {
+  OK: 0,
+  CANCELLED: 1,
+  UNKNOWN: 2,
+  INVALID_ARGUMENT: 3,
+  DEADLINE_EXCEEDED: 4,
+  NOT_FOUND: 5,
+  ALREADY_EXISTS: 6,
+  PERMISSION_DENIED: 7,
+  RESOURCE_EXHAUSTED: 8,
+  FAILED_PRECONDITION: 9,
+  ABORTED: 10,
+  OUT_OF_RANGE: 11,
+  UNIMPLEMENTED: 12,
+  INTERNAL: 13,
+  UNAVAILABLE: 14,
+  DATA_LOSS: 15,
+  UNAUTHENTICATED: 16,
+} as const;
+export type GrpcStatusCode =
+  (typeof GrpcStatusCode)[keyof typeof GrpcStatusCode];

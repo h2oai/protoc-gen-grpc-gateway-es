@@ -280,6 +280,50 @@ const responseJSON = await someServiceSomeMethodAsyncFunction(
 );
 ```
 
+#### Mocking with Mock Service Worker
+
+The `RPC#path` is kept in the `google.api.http` format, e.g. `/v1/{name=projects/*/documents/*}:customMethod`. Routers like [Mock Service Worker](https://mswjs.io/) expect the `:parameter` notation instead, so the `runtime.ts` file exports a `toPathPattern` helper which translates the path for you.
+
+```TypeScript
+import { http, HttpResponse } from "msw";
+import { toPathPattern } from "./gen/runtime";
+import { SomeService_SomeMethod } from "./gen/some_service_pb";
+
+// SomeService_SomeMethod.path is "/v1/{name=projects/*/documents/*}:customMethod"
+// toPathPattern returns          "/v1/projects/:project/documents/:document\\:customMethod"
+export const handlers = [
+  http.get(toPathPattern(SomeService_SomeMethod.path), ({ params }) => {
+    // params.project, params.document
+    return HttpResponse.json({ flip: "flop" });
+  }),
+];
+```
+
+If your service is mounted on a sub-path, pass the `basePath` as the second argument. Mock Service Worker resolves a root-relative pattern against the origin only, so `/v1/…` would be matched as `https://api.test/v1/…` and a request to `https://api.test/gateway/v1/…` would never match — not even when you set the handler `baseUrl`.
+
+```TypeScript
+// the same basePath you pass to `RPC#createRequest`
+toPathPattern(SomeService_SomeMethod.path, "https://api.test/gateway");
+// "https://api.test/gateway/v1/projects/:project/documents/:document\\:customMethod"
+
+// pass "*" if the mock should match any origin and sub-path
+toPathPattern(SomeService_SomeMethod.path, "*");
+// "*/v1/projects/:project/documents/:document\\:customMethod"
+```
+
+> [!IMPORTANT]
+> Do not pass the `basePath` through `toPathPattern` as a part of the `path`. The `basePath` must stay unescaped, because Mock Service Worker escapes the `://` of the protocol and the `:` of the port on its own and would double-escape ours.
+
+The translation rules are
+
+1. `{jobId}` becomes `:jobId`. A parameter addressing a nested field, e.g. `{flip.name}`, is sanitized to `:flip_name`, because only word characters are allowed in a parameter name.
+1. A resource name pattern is expanded literally and each `*` wildcard is named after the preceding collection segment with the trailing `s` trimmed — `{name=projects/*/documents/*}` becomes `projects/:project/documents/:document`. This yields an odd name for a collection whose singular already ends with `s`, but the Google AIP naming guidelines make those rare.
+1. The `**` wildcard spans multiple segments and is translated into `:book(.+)`.
+1. The colon of a [custom method](https://google.aip.dev/136) is escaped as `\:`, so it is matched literally instead of being read as a parameter.
+
+> [!NOTE]
+> The escaping targets [path-to-regexp](https://github.com/pillarjs/path-to-regexp) v6, which is what Mock Service Worker uses. Routers built on other matchers — Express v4 or React Router — do not understand the `\:` escape.
+
 #### Usage caveats
 
 1. The protobuf `oneof` are generated into the TypeScript as union, i.e. the message

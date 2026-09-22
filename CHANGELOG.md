@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.4.0...v0.5.0) (2026-09-22)
+
+### Features
+
+* new utility `toPathPattern` ([c962229](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/c96222984d075ba1e4a757ebf77ff857cf655c98))
+
 ## [0.4.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.3.1...v0.4.0) (2026-04-08)
 
 ### Features

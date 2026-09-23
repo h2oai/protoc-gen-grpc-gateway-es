@@ -421,3 +421,13 @@ Folders and their meaning
 1. The `bun` is used also as a package manager, use [`bun add`](https://bun.sh/docs/cli/add) for adding dependencies, [`bun run`](https://bun.sh/docs/cli/run) for running NPM scripts or [`bunx`](https://bun.sh/docs/cli/bunx) instead of `npx`.
 1. Beware that `bun` and `buf` are two different things and easy to confuse, it is easy to make mistake like running `bun` command with `buf` and vice versa.
 1. Because `buf` can only read proto files from the file-system, each test writes a temporary file into `/tests/proto/`. The name of the file passed to `getCodeGeneratorRequest` function in the test is the actual name of the file created in `/tests/proto/` directory, therefor **each test must use unique file name**. I usually name the file loosely after the test-case.
+
+### Releasing
+
+Releases are fully automated. Go to the repository's **Actions** tab, pick the **Release** workflow and press **Run workflow**. In a single job it runs the tests and the build, derives the new version from the conventional commits (you can override it with the `increment` input), updates `CHANGELOG.md`, commits, tags, pushes, creates the GitHub release and publishes to npm. Tick `dry_run` to see every step without pushing or publishing anything.
+
+Nothing needs to be configured on your machine — the workflow authenticates to GitHub with the built-in `GITHUB_TOKEN` and to npm with [trusted publishing](https://docs.npmjs.com/trusted-publishers) over OIDC, so there are no long-lived tokens to rotate. The trusted publisher is configured once on npmjs.com, under the package's *Settings → Trusted publisher*, pointing at this repository and `release.yml`.
+
+Everything deliberately lives in one workflow: a release created with the default `GITHUB_TOKEN` does not trigger other workflows, so a separate "publish when a release is created" workflow would never run.
+
+If you ever need to release from your machine instead, `bun run release` still works, but it needs a GitHub token in the environment — `export GITHUB_TOKEN=$(gh auth token)` — and you have to be logged in to npm.

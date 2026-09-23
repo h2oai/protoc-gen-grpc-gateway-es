@@ -1,0 +1,76 @@
+# Cuts a release end-to-end: test, build, bump the version, tag, create the
+# GitHub release and publish to npm.
+#
+# Authentication:
+#   - GitHub  : the built-in GITHUB_TOKEN, no PAT needed.
+#   - npm     : OIDC trusted publishing, no NPM_TOKEN needed. Configure once at
+#               npmjs.com -> package -> Settings -> Trusted publisher ->
+#               GitHub Actions (repository h2oai/protoc-gen-grpc-gateway-es,
+#               workflow release.yml).
+#
+# Everything happens in this single job on purpose: a release created with the
+# default GITHUB_TOKEN does not trigger other workflows, so a separate
+# "publish on release" workflow would never run.
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      increment:
+        description: "Version increment (auto = derive from conventional commits)"
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+        required: true
+      dry_run:
+        description: "Run through every step without pushing or publishing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the version commit and tag, create the release
+      id-token: write # npm trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # conventional-changelog needs the full history
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # npm is only used for the publish step; trusted publishing needs >= 11.5.1.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "vaclav.grohling@h2o.ai"
+
+      # Runs `bun test && bun run build` via the before:init hook, then bumps the
+      # version, updates CHANGELOG.md, commits, tags, pushes and creates the release.
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bun run release --ci \
+            ${{ inputs.increment != 'auto' && inputs.increment || '' }} \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Publish to npm
+        if: ${{ !inputs.dry_run }}
+        run: npm publish --access public

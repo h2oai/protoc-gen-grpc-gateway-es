@@ -3,6 +3,8 @@
 #
 # Authentication:
 #   - GitHub  : the built-in GITHUB_TOKEN, no PAT needed.
+#   - signing : the h2o-auto-commits GPG key, so the version commit and the tag
+#               are Verified. Needs the GPG_PRIVATE_KEY and GPG_PASSPHRASE secrets.
 #   - npm     : OIDC trusted publishing, no NPM_TOKEN needed. Configure once at
 #               npmjs.com -> package -> Settings -> Trusted publisher ->
 #               GitHub Actions (repository h2oai/protoc-gen-grpc-gateway-es,
@@ -56,10 +58,24 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Configure git author
+      # Import the h2o-auto-commits GPG key so the version commit and the tag are
+      # signed and show up as Verified (required by the branch ruleset on main).
+      - name: Import GPG signing key
+        id: import_gpg
+        uses: h2oai/h2o-shared-workflows/git/import-gpg-key@git-import-gpg-key-v1.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Configure git author and tag signing
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "vaclav.grohling@h2o.ai"
+          git config user.name "${{ steps.import_gpg.outputs.name }}"
+          git config user.email "${{ steps.import_gpg.outputs.email }}"
+          # release-it creates the tag with `git tag --annotate`, which is only
+          # signed when tag.gpgSign is set; the import action does not cover it.
+          git config tag.gpgSign true
 
       # Runs `bun test && bun run build` via the before:init hook, then bumps the
       # version, updates CHANGELOG.md, commits, tags, pushes and creates the release.

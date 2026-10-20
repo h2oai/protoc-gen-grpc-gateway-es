@@ -161,7 +161,7 @@ export type Book = {
 
 ##### `generate_name_parser`
 
-If your API follows the [Google AIP resource names](https://google.aip.dev/122) then the `name` field of your resource is typically described via `google.api.resource.pattern` annotation on the protobuf message. When you set this plugin option to `true` it will read the resource name pattern and will generate a compiler/parser function for the resource name. The function is named `<message>Name` and it allows you to parse the dynamic parts (params) of the pattern or construct the name from the dynamic parts (params).
+If your API follows the [Google AIP resource names](https://google.aip.dev/122) then the `name` field of your resource is typically described via `google.api.resource.pattern` annotation on the protobuf message. When you set this plugin option to `true` it will read the resource name pattern and will generate a compiler/parser function for the resource name. The function is named `<message>NameParser` and it allows you to parse the dynamic parts (params) of the pattern or construct the name from the dynamic parts (params).
 
 **_Example:_**
 
@@ -174,7 +174,7 @@ message Message {
 };
 ```
 
-This will generate the message TypeScript type and an object `messageName` that contains `compile` and `parse` functions.
+This will generate the message TypeScript type and an object `messageNameParser` that contains `compile` and `parse` functions.
 
 ```TypeScript
 export type Message = {
@@ -182,7 +182,7 @@ export type Message = {
 }
 
 // pseudo code
-export const messageName = {
+export const messageNameParser = {
   compile: ({ foo: string, bar: string }) => string,
   parse: (name: string) => { foo: string, bar: string }
 };

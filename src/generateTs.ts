@@ -235,7 +235,7 @@ function generateMessage(
   ) {
     const symbolPrefix = `${message.name
       .charAt(0)
-      .toLocaleLowerCase()}${message.name.slice(1)}Name`;
+      .toLocaleLowerCase()}${message.name.slice(1)}NameParser`;
     if (resourceOption.pattern.length === 1) {
       generateNameParser(
         f,

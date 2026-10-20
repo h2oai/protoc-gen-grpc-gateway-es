@@ -426,7 +426,7 @@ Folders and their meaning
 
 Releases are fully automated. Go to the repository's **Actions** tab, pick the **Release** workflow and press **Run workflow**. In a single job it runs the tests and the build, derives the new version from the conventional commits (you can override it with the `increment` input), updates `CHANGELOG.md`, commits, tags, pushes, creates the GitHub release and publishes to npm. Tick `dry_run` to see every step without pushing or publishing anything.
 
-Nothing needs to be configured on your machine — the workflow authenticates to GitHub with the built-in `GITHUB_TOKEN` and to npm with [trusted publishing](https://docs.npmjs.com/trusted-publishers) over OIDC, so there are no long-lived tokens to rotate. The trusted publisher is configured once on npmjs.com, under the package's *Settings → Trusted publisher*, pointing at this repository and `release.yml`.
+Nothing needs to be configured on your machine — the workflow authenticates to GitHub with the built-in `GITHUB_TOKEN` and to npm with [trusted publishing](https://docs.npmjs.com/trusted-publishers) over OIDC, so there are no long-lived tokens to rotate. The version commit and the tag are GPG-signed with the shared `h2o-auto-commits` key, imported from the `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets, so both land on `main` as *Verified*. The trusted publisher is configured once on npmjs.com, under the package's *Settings → Trusted publisher*, pointing at this repository and `release.yml`.
 
 Everything deliberately lives in one workflow: a release created with the default `GITHUB_TOKEN` does not trigger other workflows, so a separate "publish when a release is created" workflow would never run.
 

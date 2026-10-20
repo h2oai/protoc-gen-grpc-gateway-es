@@ -41,16 +41,16 @@ jobs:
       contents: write # push the version commit and tag, create the release
       id-token: write # npm trusted publishing (OIDC)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0 # conventional-changelog needs the full history
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       # npm is only used for the publish step; trusted publishing needs >= 11.5.1.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
@@ -62,7 +62,7 @@ jobs:
       # signed and show up as Verified (required by the branch ruleset on main).
       - name: Import GPG signing key
         id: import_gpg
-        uses: h2oai/h2o-shared-workflows/git/import-gpg-key@git-import-gpg-key-v1.0.0
+        uses: h2oai/h2o-shared-workflows/git/import-gpg-key@4be028d5e87d1785b5319a46a2fafb3275e52aa1 # git-import-gpg-key-v1.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}

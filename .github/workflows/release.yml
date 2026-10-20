@@ -22,7 +22,7 @@ on:
       increment:
         description: "Version increment (auto = derive from conventional commits)"
         type: choice
-        options: [auto, patch, minor, major]
+        options: [auto, patch, minor, major, prerelease]
         default: auto
         required: true
       dry_run:
@@ -82,11 +82,27 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INCREMENT: ${{ inputs.increment }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          bun run release --ci \
-            ${{ inputs.increment != 'auto' && inputs.increment || '' }} \
-            ${{ inputs.dry_run && '--dry-run' || '' }}
+          args=()
+          case "$INCREMENT" in
+            auto) ;;                                  # let conventional-changelog decide
+            prerelease) args+=(prepatch --preRelease=rc) ;;
+            *) args+=("$INCREMENT") ;;
+          esac
+          [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+          bun run release --ci "${args[@]}"
 
+      # A prerelease must not move the `latest` dist-tag, or every consumer
+      # without a pinned version picks up the release candidate.
       - name: Publish to npm
         if: ${{ !inputs.dry_run }}
-        run: npm publish --access public
+        run: |
+          version=$(node -p "require('./package.json').version")
+          case "$version" in
+            *-*) tag=next ;;
+            *)   tag=latest ;;
+          esac
+          echo "Publishing $version under dist-tag '$tag'"
+          npm publish --access public --tag "$tag"

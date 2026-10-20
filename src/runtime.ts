@@ -370,26 +370,36 @@ export class RPC<RequestMessage, ResponseMessage> {
   }
 }
 
+// Matches a dynamic segment of a `google.api.resource.pattern`, e.g. `{project}`. Per Google
+// AIP-123 such a pattern addresses its segments with snake_case identifiers only - no dots, no
+// `=`, no wildcards.
+// NOTE: keep in sync with the identical copy in src/generateTs.ts, which derives the `Keys`
+// union for the generated call site.
+const reResourceNameParam = /\{(\w+)\}/g;
+
+// characters that must be escaped when a pattern literal is embedded into a RegExp source.
+// `/` needs no escaping in a RegExp built from a string, but is escaped anyway to keep the
+// output readable and stable.
+const escapeRegexpLiteral = (literal: string) =>
+  literal.replace(/[.*+?^${}()|[\]\\/]/g, (char) => `\\${char}`);
+
 /**
  * Given the protobuf option google.api.resource.pattern, return a string that can be compiled into a regexp which will
  * extract the path parameters from a path as a _named_ capture group.
  * @param pathPattern must follow the protobuf option google.api.resource.pattern format
  * @example projects/{project}/documents/{document}/results/{result}
- * @returns
+ * @returns an unanchored regexp source - the caller is responsible for anchoring it, see getNameParser
  */
-export const pathPatternToParseRegexp = (pathPattern: string): string =>
-  pathPattern.replace(/(\/)|(?:\{(\w+)\})/g, ((
-    _match: string,
-    forwardSlash: string,
-    pathParameter: string,
-  ) => {
-    if (forwardSlash) {
-      return `\\/`;
-    }
-    if (pathParameter) {
-      return `(?<${pathParameter}>[^/]+)`;
-    }
-  }) as any);
+export const pathPatternToParseRegexp = (pathPattern: string): string => {
+  let source = ``;
+  let lastIndex = 0;
+  for (const match of pathPattern.matchAll(reResourceNameParam)) {
+    source += escapeRegexpLiteral(pathPattern.slice(lastIndex, match.index));
+    source += `(?<${match[1]}>[^/]+)`;
+    lastIndex = match.index + match[0].length;
+  }
+  return source + escapeRegexpLiteral(pathPattern.slice(lastIndex));
+};
 
 // path-to-regexp only accepts word characters in a parameter name, but a path parameter may use the dot notation to
 // address a nested field, e.g. `{flip.name}`
@@ -461,7 +471,6 @@ export const toPathPattern = (path: string, basePath?: string): string => {
     : pattern;
 };
 
-const reProtoPathPattern = /{([^/]+)}/g;
 /**
  * For a protobuf option google.api.resource.pattern, returns a resource name parser and compiler.
  * @param pattern must follow the protobuf option google.api.resource.pattern format
@@ -476,13 +485,19 @@ export function getNameParser<Keys extends string>(
   compile: (params: { [key in Keys]: string }) => string;
   parse: (name: string) => { [key in Keys]: string };
 } {
-  const pathParseRegexpString = pathPatternToParseRegexp(pattern);
-  const reParse = new RegExp(pathParseRegexpString);
+  // anchored - a resource name must match the pattern in full, not merely contain it
+  const reParse = new RegExp(`^${pathPatternToParseRegexp(pattern)}$`);
   const compile = (params: { [key in Keys]: string }) =>
-    pattern.replace(
-      reProtoPathPattern,
-      (_match, paramName: Keys) => params[paramName],
-    );
+    pattern.replace(reResourceNameParam, (_match, paramName: Keys) => {
+      const value = params[paramName];
+      if (value == null) {
+        throw new Error(`Missing required path parameter: ${paramName}`);
+      }
+      if (value === ``) {
+        throw new Error(`Path parameter "${paramName}" must not be empty`);
+      }
+      return value;
+    });
   const parse = (name: string) => {
     const match = name.match(reParse);
     if (!match) {

@@ -239,6 +239,38 @@ describe("getNameParser", () => {
     });
     expect(compiled).toBe(`projects/foo/documents/bar/results/baz`);
   });
+  it(`should reject a name that does not match the pattern in full`, () => {
+    const parser = getNameParser(`projects/{project}/documents/{document}`);
+    expect(() => parser.parse(`garbage/projects/foo/documents/bar`)).toThrow(
+      `Attempt to parse invalid name: "garbage/projects/foo/documents/bar"`,
+    );
+    expect(() => parser.parse(`projects/foo/documents/bar/results/baz`)).toThrow(
+      `Attempt to parse invalid name: "projects/foo/documents/bar/results/baz"`,
+    );
+  });
+  it(`should treat regexp metacharacters in a literal segment literally`, () => {
+    const parser = getNameParser(`a.c/{id}`);
+    expect(parser.parse(`a.c/foo`)).toEqual({ id: `foo` });
+    expect(() => parser.parse(`abc/foo`)).toThrow(
+      `Attempt to parse invalid name: "abc/foo"`,
+    );
+  });
+  it(`should refuse to compile a name from missing or empty parameters`, () => {
+    const parser = getNameParser(`projects/{project}/documents/{document}`);
+    expect(() => parser.compile({ project: `foo` } as any)).toThrow(
+      `Missing required path parameter: document`,
+    );
+    expect(() => parser.compile({ project: `foo`, document: `` })).toThrow(
+      `Path parameter "document" must not be empty`,
+    );
+  });
+  it(`should parse back whatever it compiled`, () => {
+    const parser = getNameParser(
+      `projects/{project}/documents/{document}/results/{result}`,
+    );
+    const params = { project: `foo`, document: `bar`, result: `baz` };
+    expect(parser.parse(parser.compile(params))).toEqual(params);
+  });
 });
 
 describe("pathPatternToParseRegexp", () => {

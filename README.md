@@ -161,7 +161,7 @@ export type Book = {
 
 ##### `generate_name_parser`
 
-If your API follows the [Google AIP resource names](https://google.aip.dev/122) then the `name` field of your resource is typically described via `google.api.resource.pattern` annotation on the protobuf message. When you set this plugin option to `true` it will read the resource name pattern and will generate a compiler/parser function for the resource name. The function is named `<message>Name` and it allows you to parse the dynamic parts (params) of the pattern or construct the name from the dynamic parts (params).
+If your API follows the [Google AIP resource names](https://google.aip.dev/122) then the `name` field of your resource is typically described via `google.api.resource.pattern` annotation on the protobuf message. When you set this plugin option to `true` it will read the resource name pattern and will generate a compiler/parser function for the resource name. The function is named `<message>NameParser` and it allows you to parse the dynamic parts (params) of the pattern or construct the name from the dynamic parts (params).
 
 **_Example:_**
 
@@ -174,7 +174,7 @@ message Message {
 };
 ```
 
-This will generate the message TypeScript type and an object `messageName` that contains `compile` and `parse` functions.
+This will generate the message TypeScript type and an object `messageNameParser` that contains `compile` and `parse` functions.
 
 ```TypeScript
 export type Message = {
@@ -182,11 +182,13 @@ export type Message = {
 }
 
 // pseudo code
-export const messageName = {
+export const messageNameParser = {
   compile: ({ foo: string, bar: string }) => string,
   parse: (name: string) => { foo: string, bar: string }
 };
 ```
+
+Both functions validate their input. `parse` requires the name to match the pattern in full — a name with extra leading or trailing segments is rejected — and throws `Attempt to parse invalid name: "<name>"` otherwise. `compile` throws `Missing required path parameter: <param>` when a parameter is absent and `Path parameter "<param>" must not be empty` when it is an empty string, which is the same wording the generated request builders use.
 
 This is usefull e.g. when you build an UI and you need to use the dynamic parts of the name for your app URL structure. For example when your resource have a name pattern `projects/{project}/datasets/{dataset}` and your UI also works with a "projects" and "datasets" and has similar hierarchial URL structure, like `app/:project/:dataset`, then if your users land on the URL `app/ABZ/129` you know it maps to project `ABZ` and dataset `129` and you need to construct a `name` parameter for the API call from that params, and vice-versa, if the API provides you with a list of datasets with their names, you want to parse the name into `project` and `dataset`, to be able to construct the app URL for the links in the app. The compile/parse functions is a type safe way how to either parse path parameters from the `name` or construct the `name` from the path parameters.
 

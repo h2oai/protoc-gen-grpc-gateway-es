@@ -164,7 +164,9 @@ function generateField(
   }
 }
 
-const reProtoPathPattern = /{([^/]+)}/g;
+// Matches a dynamic segment of a `google.api.resource.pattern`.
+// NOTE: keep in sync with the identical copy in src/runtime.ts.
+const reResourceNameParam = /\{(\w+)\}/g;
 
 function generateNameParser(
   f: GeneratedFile,
@@ -172,7 +174,7 @@ function generateNameParser(
   symbolName: string,
   runtimeFile: RuntimeFile
 ) {
-  const params = Array.from(pattern.matchAll(reProtoPathPattern)).map(
+  const params = Array.from(pattern.matchAll(reResourceNameParam)).map(
     (m) => `'${m[1]}'`
   );
   f.print(
@@ -233,7 +235,7 @@ function generateMessage(
   ) {
     const symbolPrefix = `${message.name
       .charAt(0)
-      .toLocaleLowerCase()}${message.name.slice(1)}Name`;
+      .toLocaleLowerCase()}${message.name.slice(1)}NameParser`;
     if (resourceOption.pattern.length === 1) {
       generateNameParser(
         f,

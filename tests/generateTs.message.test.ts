@@ -273,7 +273,7 @@ export type Message = {
   name?: string;
 }
 
-export const messageName = getNameParser<'foo' | 'bar'>('foos/{foo}/bars/{bar}');
+export const messageNameParser = getNameParser<'foo' | 'bar'>('foos/{foo}/bars/{bar}');
 `
   );
 });

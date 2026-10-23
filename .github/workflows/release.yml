@@ -62,20 +62,20 @@ jobs:
       # signed and show up as Verified (required by the branch ruleset on main).
       - name: Import GPG signing key
         id: import_gpg
-        uses: h2oai/h2o-shared-workflows/git/import-gpg-key@4be028d5e87d1785b5319a46a2fafb3275e52aa1 # git-import-gpg-key-v1.0.0
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
           git_user_signingkey: true
           git_commit_gpgsign: true
+          # release-it creates the tag with `git tag --annotate`, which is signed only when
+          # tag.gpgSign is set - git_commit_gpgsign alone does not cover tags.
+          git_tag_gpgsign: true
 
-      - name: Configure git author and tag signing
+      - name: Configure git author
         run: |
           git config user.name "${{ steps.import_gpg.outputs.name }}"
           git config user.email "${{ steps.import_gpg.outputs.email }}"
-          # release-it creates the tag with `git tag --annotate`, which is only
-          # signed when tag.gpgSign is set; the import action does not cover it.
-          git config tag.gpgSign true
 
       # Runs `bun test && bun run build` via the before:init hook, then bumps the
       # version, updates CHANGELOG.md, commits, tags, pushes and creates the release.

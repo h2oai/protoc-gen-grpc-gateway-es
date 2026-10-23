@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.5.0...v0.6.0) (2026-10-23)
+
+### ⚠ BREAKING CHANGES
+
+* change `GrpcStatusCode` to TypeScript enum ([#10](https://github.com/h2oai/protoc-gen-grpc-gateway-es/issues/10))
+* FQDName parser renamed to `xxxName` => `xxxNameParser` and RegExp anchored ([#9](https://github.com/h2oai/protoc-gen-grpc-gateway-es/issues/9))
+
+### Bug Fixes
+
+* FQDName parser renamed to `xxxName` => `xxxNameParser` and RegExp anchored ([#9](https://github.com/h2oai/protoc-gen-grpc-gateway-es/issues/9)) ([b0a8121](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/b0a8121ca243bb4bb5cbd5d9f970c349d476cc64))
+
+### Code Refactoring
+
+* change `GrpcStatusCode` to TypeScript enum ([#10](https://github.com/h2oai/protoc-gen-grpc-gateway-es/issues/10)) ([abe6691](https://github.com/h2oai/protoc-gen-grpc-gateway-es/commit/abe669157567fa397d275ef8c15d79e2a521b191))
+
 ## [0.5.0](https://github.com/h2oai/protoc-gen-grpc-gateway-es/compare/v0.4.0...v0.5.0) (2026-09-22)
 
 ### Features
